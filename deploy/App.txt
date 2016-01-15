@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Thu Jan 14 2016 16:54:44 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Jan 15 2016 15:32:11 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Jan 14 2016 16:54:44 GMT-0800 (PST)";
-        var CHECKSUM = 10486031921;
+        var APP_BUILD_DATE = "Fri Jan 15 2016 15:32:11 GMT-0800 (PST)";
+        var CHECKSUM = 10452754075;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -324,9 +324,7 @@ Ext.define("TSTopLevelTimeReport", {
             model:'TimeEntryValue',
             limit: 'Infinity',
             filters: tev_filters,
-            context: {
-                project: null
-            },
+            
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString',

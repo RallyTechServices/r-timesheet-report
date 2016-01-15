@@ -131,9 +131,7 @@ Ext.define("TSTopLevelTimeReport", {
             model:'TimeEntryValue',
             limit: 'Infinity',
             filters: tev_filters,
-            context: {
-                project: null
-            },
+            
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString',
