@@ -7,6 +7,8 @@ Ext.define('TSTimesheetFinanceRow',{
         { name: 'DateVal', type: 'date' },
         { name: 'Hours', type: 'float' },
         { name: 'TimeEntryItem', type:'object'},
-        { name: '_TopLevelParent', type:'object'}
+        { name: '_TopLevelParent', type:'object'},
+        { name: '_CostCenter', type:'string' },
+        { name: '_Vendor', type:'string' }
     ]
 });

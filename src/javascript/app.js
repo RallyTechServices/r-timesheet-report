@@ -9,6 +9,13 @@ Ext.define("TSTopLevelTimeReport", {
         {xtype:'container', itemId:'selector_box', region: 'north',  layout: { type:'hbox' }},
         {xtype:'container', itemId:'display_box' , region: 'center', layout: { type: 'fit'} }
     ],
+    
+    config: {
+        defaultSettings: {
+            vendorField: 'MiddleName',
+            costCenterField: 'CostCenter'
+        }
+    },
 
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
@@ -38,7 +45,7 @@ Ext.define("TSTopLevelTimeReport", {
             layout: 'vbox'
         });
         
-        var week_start = this._getBeginningOfWeek(Rally.util.DateTime.add(new Date(), 'week', -4));
+        var week_start = this._getBeginningOfWeek(Rally.util.DateTime.add(new Date(), 'week', -3));
         
         date_container.add({
             xtype:'rallydatefield',
@@ -119,7 +126,7 @@ Ext.define("TSTopLevelTimeReport", {
             var start_date = Rally.util.DateTime.toIsoString( this.down('#to_date_selector').getValue(),true).replace(/T.*$/,'T00:00:00.000Z');
             tev_filters.push({property:'TimeEntryItem.WeekStartDate', operator: '<=', value:start_date});
         }
-        
+                
         var tev_config = {
             model:'TimeEntryValue',
             limit: 'Infinity',
@@ -130,7 +137,7 @@ Ext.define("TSTopLevelTimeReport", {
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString',
-                'User','UserName'
+                'User','UserName', this.getSetting('costCenterField'), this.getSetting('vendorField')
             ]
         };
         
@@ -208,7 +215,8 @@ Ext.define("TSTopLevelTimeReport", {
             var config = { 
                 models:models, 
                 filters: Rally.data.wsapi.Filter.or(filters), 
-                fetch: ['FormattedID','Name'] 
+                fetch: ['FormattedID','Name'],
+                context: { project: null }
             };
             promises.push(function() { return this._loadWsapiArtifacts(config); });
         });
@@ -259,14 +267,16 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _getRowsFromTime: function(time_values) {
+        var me = this;
         return Ext.Array.map( time_values, function(time_value){
-            console.log('tv', time_value);
-            
+            var user = time_value.get('TimeEntryItem').User;
             return Ext.create('TSTimesheetFinanceRow',
                 Ext.merge({
-                    '_User': time_value.get('TimeEntryItem').User,
+                    '_User': user,
                     '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
-                    '_TopLevelParent': time_value.get('_TopLevelParent')
+                    '_TopLevelParent': time_value.get('_TopLevelParent'),
+                    '_CostCenter': user[me.getSetting('costCenterField')],
+                    '_Vendor': user[me.getSetting('vendorField')]
                 },
                 time_value.getData())
             );
@@ -277,7 +287,8 @@ Ext.define("TSTopLevelTimeReport", {
         this.logger.log('_addGrid', rows);
         var store = Ext.create('Rally.data.custom.Store',{ 
             data: rows, 
-            model: 'TSTimesheetFinanceRow'
+            model: 'TSTimesheetFinanceRow',
+            pageSize: 10000
         });
                 
         container.add({
@@ -300,6 +311,8 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             },
             { dataIndex:'_User', text: 'User', renderer: function(value) { return value.UserName; } },
+            { dataIndex: '_CostCenter', text:'Cost Center'},
+            { dataIndex: '_Vendor', text:'Vendor' },
             { dataIndex: '_WeekStartString', text: 'Week Start' },
             { dataIndex: 'DateVal', text: 'Date', renderer: function(value) { return me._getUTCDate(value); }},
             { dataIndex: 'Hours', text: 'Hours' }
@@ -387,6 +400,72 @@ Ext.define("TSTopLevelTimeReport", {
         };
         
         return this._loadWsapiRecords(config);
+    },
+
+    _filterOutExceptStrings: function(store) {
+        var app = Rally.getApp();
+        
+        store.filter([{
+            filterFn:function(field){ 
+                var attribute_definition = field.get('fieldDefinition').attributeDefinition;
+                var attribute_type = null;
+                if ( attribute_definition ) {
+                    attribute_type = attribute_definition.AttributeType;
+                }
+                if (  attribute_type == "BOOLEAN" ) {
+                    return false;
+                }
+                if ( attribute_type == "STRING" || attribute_type == "RATING") {
+                    //if ( !field.get('fieldDefinition').attributeDefinition.Constrained ) {
+                        return true;
+                    //}
+                }
+                
+                //console.log(attribute_definition.ElementName, attribute_definition,  attribute_type);
+                return false;
+            } 
+        }]);
+    },
+    
+    getSettingsFields: function() {
+        var me = this;
+        
+        return [{
+            name: 'vendorField',
+            xtype: 'rallyfieldcombobox',
+            fieldLabel: 'User Vendor Field',
+            labelWidth: 75,
+            labelAlign: 'left',
+            minWidth: 200,
+            margin: 10,
+            autoExpand: false,
+            alwaysExpanded: false,
+            model: 'User',
+            listeners: {
+                ready: function(field_box) {
+                    me._filterOutExceptStrings(field_box.getStore());
+                }
+            },
+            readyEvent: 'ready'
+        },
+        {
+            name: 'costCenterField',
+            xtype: 'rallyfieldcombobox',
+            fieldLabel: 'User Cost Center Field',
+            labelWidth: 75,
+            labelAlign: 'left',
+            minWidth: 200,
+            margin: 10,
+            autoExpand: false,
+            alwaysExpanded: false,
+            model: 'User',
+            listeners: {
+                ready: function(field_box) {
+                    me._filterOutExceptStrings(field_box.getStore());
+                }
+            },
+            readyEvent: 'ready'
+        }];
     },
     
     getOptions: function() {
