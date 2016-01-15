@@ -169,9 +169,13 @@ Ext.define("TSTopLevelTimeReport", {
         this._loadLookbackRecords(config).then({
             scope: this,
             success: function(lookback_records) {
-                var parent_oids = Ext.Array.map(lookback_records, function(record) {
-                    return record.get('_ItemHierarchy')[0];
-                });
+                var parent_oids = Ext.Array.flatten(
+                    Ext.Array.map(lookback_records, function(record) {
+                        return Ext.Array.map(record.get('_ItemHierarchy'), function(item) {
+                            return item;
+                        });
+                    })
+                );
                 
                 this._loadParentsFromOIDs(Ext.Array.unique(parent_oids)).then({
                     scope: this,
@@ -213,8 +217,7 @@ Ext.define("TSTopLevelTimeReport", {
             var config = { 
                 models:models, 
                 filters: Rally.data.wsapi.Filter.or(filters), 
-                fetch: ['FormattedID','Name'],
-                context: { project: null }
+                fetch: ['FormattedID','Name']
             };
             promises.push(function() { return this._loadWsapiArtifacts(config); });
         });
@@ -241,12 +244,13 @@ Ext.define("TSTopLevelTimeReport", {
         Ext.Array.each(lookback_records, function(record) {
             var oid_list = record.get('_ItemHierarchy');
             var oid = oid_list[oid_list.length-1];
-            var parent_oid = oid_list[0];
-            if ( parents_by_parent_oid[parent_oid] ) {
-                parents_by_oid[oid] = parents_by_parent_oid[parent_oid];
-            } else {
-                this.logger.log("No parent for", record);
-            }
+            
+            // find topmost parent in scope
+            Ext.Array.each( oid_list, function(parent_oid) {
+                if ( parents_by_parent_oid[parent_oid] ) {
+                    parents_by_oid[oid] = parents_by_parent_oid[parent_oid];
+                }
+            },this,true);
         },this);
                 
         Ext.Array.each(time_values, function(time_value){
