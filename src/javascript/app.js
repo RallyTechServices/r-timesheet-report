@@ -12,8 +12,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     config: {
         defaultSettings: {
-            vendorField: 'MiddleName',
-            costCenterField: 'CostCenter'
+            vendorField: 'MiddleName'
         }
     },
 
@@ -135,7 +134,7 @@ Ext.define("TSTopLevelTimeReport", {
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString',
-                'User','UserName', this.getSetting('costCenterField'), this.getSetting('vendorField')
+                'User','UserName', 'CostCenter', this.getSetting('vendorField')
             ]
         };
         
@@ -277,7 +276,7 @@ Ext.define("TSTopLevelTimeReport", {
                     '_User': user,
                     '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
                     '_TopLevelParent': time_value.get('_TopLevelParent'),
-                    '_CostCenter': user[me.getSetting('costCenterField')],
+                    '_CostCenter': user['CostCenter'],
                     '_Vendor': user[me.getSetting('vendorField')]
                 },
                 time_value.getData())
@@ -436,24 +435,6 @@ Ext.define("TSTopLevelTimeReport", {
             name: 'vendorField',
             xtype: 'rallyfieldcombobox',
             fieldLabel: 'User Vendor Field',
-            labelWidth: 75,
-            labelAlign: 'left',
-            minWidth: 200,
-            margin: 10,
-            autoExpand: false,
-            alwaysExpanded: false,
-            model: 'User',
-            listeners: {
-                ready: function(field_box) {
-                    me._filterOutExceptStrings(field_box.getStore());
-                }
-            },
-            readyEvent: 'ready'
-        },
-        {
-            name: 'costCenterField',
-            xtype: 'rallyfieldcombobox',
-            fieldLabel: 'User Cost Center Field',
             labelWidth: 75,
             labelAlign: 'left',
             minWidth: 200,

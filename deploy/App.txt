@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Fri Jan 15 2016 15:52:08 GMT-0800 (PST) -->
+    <!--  Build Date: Thu Jan 21 2016 18:56:43 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Jan 15 2016 15:52:08 GMT-0800 (PST)";
-        var CHECKSUM = 10522378273;
+        var APP_BUILD_DATE = "Thu Jan 21 2016 18:56:43 GMT-0800 (PST)";
+        var CHECKSUM = 10015056041;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -205,8 +205,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     config: {
         defaultSettings: {
-            vendorField: 'MiddleName',
-            costCenterField: 'CostCenter'
+            vendorField: 'MiddleName'
         }
     },
 
@@ -328,7 +327,7 @@ Ext.define("TSTopLevelTimeReport", {
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString',
-                'User','UserName', this.getSetting('costCenterField'), this.getSetting('vendorField')
+                'User','UserName', 'CostCenter', this.getSetting('vendorField')
             ]
         };
         
@@ -470,7 +469,7 @@ Ext.define("TSTopLevelTimeReport", {
                     '_User': user,
                     '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
                     '_TopLevelParent': time_value.get('_TopLevelParent'),
-                    '_CostCenter': user[me.getSetting('costCenterField')],
+                    '_CostCenter': user['CostCenter'],
                     '_Vendor': user[me.getSetting('vendorField')]
                 },
                 time_value.getData())
@@ -629,24 +628,6 @@ Ext.define("TSTopLevelTimeReport", {
             name: 'vendorField',
             xtype: 'rallyfieldcombobox',
             fieldLabel: 'User Vendor Field',
-            labelWidth: 75,
-            labelAlign: 'left',
-            minWidth: 200,
-            margin: 10,
-            autoExpand: false,
-            alwaysExpanded: false,
-            model: 'User',
-            listeners: {
-                ready: function(field_box) {
-                    me._filterOutExceptStrings(field_box.getStore());
-                }
-            },
-            readyEvent: 'ready'
-        },
-        {
-            name: 'costCenterField',
-            xtype: 'rallyfieldcombobox',
-            fieldLabel: 'User Cost Center Field',
             labelWidth: 75,
             labelAlign: 'left',
             minWidth: 200,
