@@ -93,7 +93,7 @@ Ext.define("TSTopLevelTimeReport", {
         
         container.add({
             xtype: 'rallybutton',
-            text: 'Choose PI',
+            text: 'Choose Portfolio Item',
             margin: '0px 5px 0px 5px',
             listeners: {
                 scope: this,

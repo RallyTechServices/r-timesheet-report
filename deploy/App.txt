@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Thu Jan 21 2016 20:41:07 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Jan 22 2016 13:23:35 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Jan 21 2016 20:41:07 GMT-0800 (PST)";
-        var CHECKSUM = 19399759857;
+        var APP_BUILD_DATE = "Fri Jan 22 2016 13:23:35 GMT-0800 (PST)";
+        var CHECKSUM = 19422013897;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -463,7 +463,7 @@ Ext.define("TSTopLevelTimeReport", {
         
         container.add({
             xtype: 'rallybutton',
-            text: 'Choose PI',
+            text: 'Choose Portfolio Item',
             margin: '0px 5px 0px 5px',
             listeners: {
                 scope: this,
