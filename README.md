@@ -2,6 +2,8 @@
 
 ## Development Notes
 
+* Assumes bottom level PI is called a Feature
+
 ### First Load
 
 If you've just downloaded this from github and you want to do development, 

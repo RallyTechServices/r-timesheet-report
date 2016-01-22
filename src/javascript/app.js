@@ -27,7 +27,7 @@ Ext.define("TSTopLevelTimeReport", {
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
     },
-                        
+
     launch: function() {
         this._getPortfolioItemTypes().then({
             scope: this,
@@ -91,12 +91,40 @@ Ext.define("TSTopLevelTimeReport", {
             }
         }).setValue(new Date());
         
+        container.add({
+            xtype: 'rallybutton',
+            text: 'Choose PI',
+            margin: '0px 5px 0px 5px',
+            listeners: {
+                scope: this,
+                click: this._launchPIPicker
+            }
+        });
+        
         var spacer = container.add({ xtype: 'container', flex: 1});
         
         if ( this.isExternal() ) {
             container.add({type:'container', html: '&nbsp;&nbsp;&nbsp;&nbsp;'});
         }
-        
+    },
+    
+    _launchPIPicker: function() {
+        var me = this;
+        this._selectedPI = null;
+        Ext.create('Rally.ui.dialog.ArtifactChooserDialog', {
+            artifactTypes: ['portfolioitem'],
+            autoShow: true,
+            height: 250,
+            title: 'Choose Portfolio Item',
+            multiple: false,
+            listeners: {
+                artifactchosen: function(dialog, selectedRecord){
+                    this._selectedPI = selectedRecord;
+                    me._updateData();
+                },
+                scope: this
+            }
+         });
     },
     
     _updateData: function() {
@@ -104,7 +132,8 @@ Ext.define("TSTopLevelTimeReport", {
         
         Deft.Chain.pipeline([
             this._loadTime,
-            this._loadTopLevelItems
+            this._loadTopLevelItems,
+            this._filterForPI
         ],this).then({
             scope: this,
             success: function(time_values) {
@@ -133,7 +162,7 @@ Ext.define("TSTopLevelTimeReport", {
             var start_date = Rally.util.DateTime.toIsoString( this.down('#to_date_selector').getValue(),true).replace(/T.*$/,'T00:00:00.000Z');
             tev_filters.push({property:'TimeEntryItem.WeekStartDate', operator: '<=', value:start_date});
         }
-                
+        
         var tev_config = {
             model:'TimeEntryValue',
             limit: 'Infinity',
@@ -188,7 +217,6 @@ Ext.define("TSTopLevelTimeReport", {
                 this._loadParentsFromOIDs(Ext.Array.unique(parent_oids)).then({
                     scope: this,
                     success: function(parents) {
-                        console.log('parents', parents);
                         var time = this._addParentsToTime(time_values, lookback_records, parents);
                         deferred.resolve(time);
                     },
@@ -201,6 +229,20 @@ Ext.define("TSTopLevelTimeReport", {
         });
         
         return deferred.promise;
+    },
+    
+    _filterForPI: function(time_values) {
+        var selected_pi = this._selectedPI;
+        if ( Ext.isEmpty(selected_pi) ) { 
+            return time_values;
+        }
+        //_TypeHierarchy
+        var filtered_time_values = Ext.Array.filter(time_values, function(time_value) { 
+            var type_hierarchy = time_value.get('_TypeHierarchy');
+            return Ext.Array.contains(type_hierarchy, parseInt(selected_pi.get('ObjectID')));
+        });
+        
+        return filtered_time_values;
     },
     
     _loadParentsFromOIDs: function(parent_oids) {
@@ -249,9 +291,13 @@ Ext.define("TSTopLevelTimeReport", {
         });
         
         var parents_by_oid = {};
+        var type_hierarchy_by_oid = {};
+        
         Ext.Array.each(lookback_records, function(record) {
             var oid_list = record.get('_ItemHierarchy');
             var oid = oid_list[oid_list.length-1];
+            
+            type_hierarchy_by_oid[oid] = oid_list;
             
             // find topmost parent in scope
             Ext.Array.each( oid_list, function(parent_oid) {
@@ -267,8 +313,10 @@ Ext.define("TSTopLevelTimeReport", {
             if ( !Ext.isEmpty(wp) ) {
                 var oid = wp.ObjectID;
                 time_value.set('_TopLevelParent', parents_by_oid[oid]);
+                time_value.set('_TypeHierarchy', type_hierarchy_by_oid[oid] || []);
             } else {
                 time_value.set('_TopLevelParent', "");
+                time_value.set('_TypeHierarchy', []);
             }
         });
         
