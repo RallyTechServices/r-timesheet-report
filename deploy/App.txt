@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Thu Jan 21 2016 19:12:41 GMT-0800 (PST) -->
+    <!--  Build Date: Thu Jan 21 2016 20:04:18 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Jan 21 2016 19:12:41 GMT-0800 (PST)";
-        var CHECKSUM = 11003502982;
+        var APP_BUILD_DATE = "Thu Jan 21 2016 20:04:18 GMT-0800 (PST)";
+        var CHECKSUM = 17481318818;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -176,6 +176,180 @@ Ext.define('Rally.technicalservices.Logger',{
 
 });
 
+/**
+ * Allows configuration of wip and schedule state mapping for kanban columns
+ *
+ *      @example
+ *      Ext.create('Ext.Container', {
+ *          items: [{
+ *              xtype: 'kanbancolumnsettingsfield',
+ *              value: {}
+ *          }],
+ *          renderTo: Ext.getBody().dom
+ *      });
+ *
+ */
+Ext.define('Rally.technicalservices.ColumnSettingsField', {
+    extend: 'Ext.form.field.Base',
+    alias: 'widget.tscolumnsettingsfield',
+
+    requires: [
+        'Rally.ui.combobox.ComboBox',
+        'Rally.ui.TextField',
+        'Rally.ui.combobox.FieldValueComboBox'
+    ],
+
+    fieldSubTpl: '<div id="{id}" class="settings-grid"></div>',
+
+    width: 400,
+    cls: 'column-settings',
+
+    config: {
+        /**
+         * @cfg {Object}
+         *
+         * The column settings value for this field
+         */
+        value: undefined,
+        /**
+         * 
+         * @cfg [{Object}] rallygrid column definition ({dataIndex:....}) 
+         */
+        gridColumns: []
+    },
+
+    onDestroy: function() {
+        if (this._grid) {
+            this._grid.destroy();
+            delete this._grid;
+        }
+        this.callParent(arguments);
+    },
+
+    onRender: function() {
+        this.callParent(arguments);
+
+        var data = Ext.Array.map(this.gridColumns, this._recordToGridRow, this);
+            
+        this._store = Ext.create('Ext.data.Store', {
+            fields: ['column', 'show'],
+            data: data
+        });
+                
+        this._grid = Ext.create('Rally.ui.grid.Grid', {
+            autoWidth: true,
+            renderTo: this.inputEl,
+            columnCfgs: this._getColumnCfgs(),
+            showPagingToolbar: false,
+            showRowActionsColumn: false,
+            enableRanking: false,
+            store: this._store,
+            editingConfig: {
+                publishMessages: false
+            }
+        });
+    },
+
+    _getColumnCfgs: function() {
+        var columns = [
+            {
+                text: 'Column',
+                dataIndex: 'column',
+                emptyCellText: 'None',
+                flex: 2
+            },
+            {
+                text: 'Show',
+                dataIndex: 'show',
+                flex: 1,
+                renderer: function (value) {
+                    return value === true ? 'Yes' : 'No';
+                },
+                editor: {
+                    xtype: 'rallycombobox',
+                    displayField: 'name',
+                    valueField: 'value',
+                    editable: false,
+                    storeType: 'Ext.data.Store',
+                    storeConfig: {
+                        remoteFilter: false,
+                        fields: ['name', 'value'],
+                        data: [
+                            {'name': 'Yes', 'value': true},
+                            {'name': 'No', 'value': false}
+                        ]
+                    }
+                }
+            }
+        ];
+        return columns;
+    },
+
+    /**
+     * When a form asks for the data this field represents,
+     * give it the name of this field and the ref of the selected project (or an empty string).
+     * Used when persisting the value of this field.
+     * @return {Object}
+     */
+    getSubmitData: function() {
+        var data = {};
+        data[this.name] = Ext.JSON.encode(this._buildSettingValue());
+        return data;
+    },
+
+    _buildSettingValue: function() {
+        console.log('--', this.gridColumns);
+        var columns = {};
+        this._store.each(function(record) {
+            if (record.get('show')) {
+                columns[record.get('column')] = {
+                    show: record.get('show')
+                };
+            }
+        }, this);
+        return columns;
+    },
+
+    getErrors: function() {
+        var errors = [];
+        if (this._storeLoaded && !Ext.Object.getSize(this._buildSettingValue())) {
+            errors.push('At least one column must be shown.');
+        }
+        return errors;
+    },
+
+    setValue: function(value) {
+        this.callParent(arguments);
+        
+        this._value = value;
+    },
+
+    _getColumnValue: function(columnName) {
+        var value = this._value;
+        if ( Ext.isString(value) ) {
+            value = Ext.JSON.decode(value);
+        }
+        
+        if ( Ext.isEmpty(value) || Ext.isEmpty(value[columnName])) {
+            return null;
+        }
+        
+        return value[columnName];
+    },
+
+    _recordToGridRow: function(grid_column) {
+        var column_name = grid_column['text'];
+        var show = this._getColumnValue(column_name) && this._getColumnValue(column_name)['show'];
+        
+        var column = {
+            column: column_name,
+            show: show
+        };
+
+        return column;
+    }
+});
+
 Ext.define('TSTimesheetFinanceRow',{
     extend: 'Ext.data.Model',
     
@@ -207,7 +381,15 @@ Ext.define("TSTopLevelTimeReport", {
     
     config: {
         defaultSettings: {
-            vendorField: 'MiddleName'
+            vendorField: 'MiddleName',
+            columns: Ext.JSON.encode({
+                'User': {show: true},
+                'Cost Center': {show: true},
+                'Vendor': {show: true},
+                'Week Start': {show: true},
+                'Date': {show: true},
+                'Hours': {show: true}
+            })
         }
     },
 
@@ -507,44 +689,107 @@ Ext.define("TSTopLevelTimeReport", {
         });
     },
     
+    _getColumnShowSetting: function(column_name) {
+        var column_settings = this.getSetting('columns');
+        if ( Ext.isString(column_settings) ) {
+            column_settings = Ext.JSON.decode(column_settings);
+        }
+        return column_settings[column_name] && column_settings[column_name]['show'];
+    },
+    
     _getColumns: function() {
         var me = this;
+                
         return [
-            { dataIndex: '_TopLevelParent', text: 'Top Level Work Item', renderer: function(value) { 
+            { 
+                dataIndex: '_TopLevelParent', 
+                text: 'Top Level Work Item', 
+                hidden: !this._getColumnShowSetting('Top Level Work Item'),
+                renderer: function(value) { 
                     if ( Ext.isEmpty(value) ) { return '' }
                     return value.get('FormattedID');
                 }
             },
-            { dataIndex: '_Feature', text: 'Feature', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            { 
+                dataIndex: '_Feature', 
+                text: 'Feature', 
+                hidden: !this._getColumnShowSetting('Feature'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.FormattedID;
                 }
-                return v.FormattedID;
-            } },
-            { dataIndex: '_WorkProduct', text: 'Story ID', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            },
+            { 
+                dataIndex: '_WorkProduct', 
+                text: 'Story ID', 
+                hidden: !this._getColumnShowSetting('Story ID'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.FormattedID;
+                } 
+            },
+            { 
+                dataIndex: '_WorkProduct', 
+                text: 'Story Name', 
+                hidden: !this._getColumnShowSetting('Story Name'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.Name;
                 }
-                return v.FormattedID;
-            } },
-            { dataIndex: '_WorkProduct', text: 'Story Name', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            },
+            { 
+                dataIndex: '_WorkProduct', 
+                text: 'Project', 
+                hidden: !this._getColumnShowSetting('Project'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.Project._refObjectName;
                 }
-                return v.Name;
-            }  },
-            { dataIndex: '_WorkProduct', text: 'Project', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            },
+            { 
+                dataIndex: '_User', 
+                text: 'User', 
+                hidden: !this._getColumnShowSetting('User'),
+                renderer: function(value) { 
+                    return value.UserName; 
                 }
-                return v.Project._refObjectName;
-            }  },
-            { dataIndex: '_User', text: 'User', renderer: function(value) { return value.UserName; } },
-            { dataIndex: '_CostCenter', text:'Cost Center'},
-            { dataIndex: '_Vendor', text:'Vendor' },
-            { dataIndex: '_WeekStartString', text: 'Week Start' },
-            { dataIndex: 'DateVal', text: 'Date', renderer: function(value) { return me._getUTCDate(value); }},
-            { dataIndex: 'Hours', text: 'Hours' }
+            },
+            { 
+                dataIndex: '_CostCenter', 
+                text:'Cost Center',
+                hidden: !this._getColumnShowSetting('Cost Center')
+            },
+            { 
+                dataIndex: '_Vendor', 
+                text:'Vendor',
+                hidden: !this._getColumnShowSetting('Vendor')
+            },
+            { 
+                dataIndex: '_WeekStartString', 
+                text: 'Week Start',
+                hidden: !this._getColumnShowSetting('Week Start')
+            },
+            { 
+                dataIndex: 'DateVal', 
+                text: 'Date', 
+                hidden: !this._getColumnShowSetting('Date'),
+                renderer: function(value) { 
+                    return me._getUTCDate(value); 
+                }
+            },
+            { 
+                dataIndex: 'Hours', 
+                text: 'Hours',
+                hidden: !this._getColumnShowSetting('Hours')
+            }
         ];
     },
     
@@ -659,6 +904,8 @@ Ext.define("TSTopLevelTimeReport", {
     getSettingsFields: function() {
         var me = this;
         
+        var columns = this._getColumns();
+        
         return [{
             name: 'vendorField',
             xtype: 'rallyfieldcombobox',
@@ -676,6 +923,21 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             },
             readyEvent: 'ready'
+        },
+            
+        {
+            name: 'columns',
+            readyEvent: 'ready',
+            fieldLabel: 'Columns',
+            margin: '5px 0 0 12px',
+            xtype: 'tscolumnsettingsfield',
+            gridColumns: columns,
+            listeners: {
+                ready: function() {
+                    this.fireEvent('columnsettingsready');
+                }
+            },
+            bubbleEvents: 'columnsettingsready'
         }];
     },
     

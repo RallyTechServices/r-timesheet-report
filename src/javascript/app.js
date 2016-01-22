@@ -12,7 +12,15 @@ Ext.define("TSTopLevelTimeReport", {
     
     config: {
         defaultSettings: {
-            vendorField: 'MiddleName'
+            vendorField: 'MiddleName',
+            columns: Ext.JSON.encode({
+                'User': {show: true},
+                'Cost Center': {show: true},
+                'Vendor': {show: true},
+                'Week Start': {show: true},
+                'Date': {show: true},
+                'Hours': {show: true}
+            })
         }
     },
 
@@ -312,44 +320,107 @@ Ext.define("TSTopLevelTimeReport", {
         });
     },
     
+    _getColumnShowSetting: function(column_name) {
+        var column_settings = this.getSetting('columns');
+        if ( Ext.isString(column_settings) ) {
+            column_settings = Ext.JSON.decode(column_settings);
+        }
+        return column_settings[column_name] && column_settings[column_name]['show'];
+    },
+    
     _getColumns: function() {
         var me = this;
+                
         return [
-            { dataIndex: '_TopLevelParent', text: 'Top Level Work Item', renderer: function(value) { 
+            { 
+                dataIndex: '_TopLevelParent', 
+                text: 'Top Level Work Item', 
+                hidden: !this._getColumnShowSetting('Top Level Work Item'),
+                renderer: function(value) { 
                     if ( Ext.isEmpty(value) ) { return '' }
                     return value.get('FormattedID');
                 }
             },
-            { dataIndex: '_Feature', text: 'Feature', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            { 
+                dataIndex: '_Feature', 
+                text: 'Feature', 
+                hidden: !this._getColumnShowSetting('Feature'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.FormattedID;
                 }
-                return v.FormattedID;
-            } },
-            { dataIndex: '_WorkProduct', text: 'Story ID', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            },
+            { 
+                dataIndex: '_WorkProduct', 
+                text: 'Story ID', 
+                hidden: !this._getColumnShowSetting('Story ID'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.FormattedID;
+                } 
+            },
+            { 
+                dataIndex: '_WorkProduct', 
+                text: 'Story Name', 
+                hidden: !this._getColumnShowSetting('Story Name'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.Name;
                 }
-                return v.FormattedID;
-            } },
-            { dataIndex: '_WorkProduct', text: 'Story Name', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            },
+            { 
+                dataIndex: '_WorkProduct', 
+                text: 'Project', 
+                hidden: !this._getColumnShowSetting('Project'),
+                renderer: function(v) {
+                    if ( Ext.isEmpty(v) ) {
+                        return "";
+                    }
+                    return v.Project._refObjectName;
                 }
-                return v.Name;
-            }  },
-            { dataIndex: '_WorkProduct', text: 'Project', renderer: function(v) {
-                if ( Ext.isEmpty(v) ) {
-                    return "";
+            },
+            { 
+                dataIndex: '_User', 
+                text: 'User', 
+                hidden: !this._getColumnShowSetting('User'),
+                renderer: function(value) { 
+                    return value.UserName; 
                 }
-                return v.Project._refObjectName;
-            }  },
-            { dataIndex: '_User', text: 'User', renderer: function(value) { return value.UserName; } },
-            { dataIndex: '_CostCenter', text:'Cost Center'},
-            { dataIndex: '_Vendor', text:'Vendor' },
-            { dataIndex: '_WeekStartString', text: 'Week Start' },
-            { dataIndex: 'DateVal', text: 'Date', renderer: function(value) { return me._getUTCDate(value); }},
-            { dataIndex: 'Hours', text: 'Hours' }
+            },
+            { 
+                dataIndex: '_CostCenter', 
+                text:'Cost Center',
+                hidden: !this._getColumnShowSetting('Cost Center')
+            },
+            { 
+                dataIndex: '_Vendor', 
+                text:'Vendor',
+                hidden: !this._getColumnShowSetting('Vendor')
+            },
+            { 
+                dataIndex: '_WeekStartString', 
+                text: 'Week Start',
+                hidden: !this._getColumnShowSetting('Week Start')
+            },
+            { 
+                dataIndex: 'DateVal', 
+                text: 'Date', 
+                hidden: !this._getColumnShowSetting('Date'),
+                renderer: function(value) { 
+                    return me._getUTCDate(value); 
+                }
+            },
+            { 
+                dataIndex: 'Hours', 
+                text: 'Hours',
+                hidden: !this._getColumnShowSetting('Hours')
+            }
         ];
     },
     
@@ -464,6 +535,8 @@ Ext.define("TSTopLevelTimeReport", {
     getSettingsFields: function() {
         var me = this;
         
+        var columns = this._getColumns();
+        
         return [{
             name: 'vendorField',
             xtype: 'rallyfieldcombobox',
@@ -481,6 +554,21 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             },
             readyEvent: 'ready'
+        },
+            
+        {
+            name: 'columns',
+            readyEvent: 'ready',
+            fieldLabel: 'Columns',
+            margin: '5px 0 0 12px',
+            xtype: 'tscolumnsettingsfield',
+            gridColumns: columns,
+            listeners: {
+                ready: function() {
+                    this.fireEvent('columnsettingsready');
+                }
+            },
+            bubbleEvents: 'columnsettingsready'
         }];
     },
     
