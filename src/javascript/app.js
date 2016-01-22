@@ -134,7 +134,8 @@ Ext.define("TSTopLevelTimeReport", {
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString',
-                'User','UserName', 'CostCenter', this.getSetting('vendorField')
+                'User','UserName', 'CostCenter', 'FormattedID', 'Name', 
+                this.getSetting('vendorField')
             ]
         };
         
@@ -271,13 +272,21 @@ Ext.define("TSTopLevelTimeReport", {
         var me = this;
         return Ext.Array.map( time_values, function(time_value){
             var user = time_value.get('TimeEntryItem').User;
+            var user_story = time_value.get('TimeEntryItem').WorkProduct;
+            var feature = null;
+            
+            if ( user_story ) {
+                feature = user_story.Feature;
+            }
             return Ext.create('TSTimesheetFinanceRow',
                 Ext.merge({
                     '_User': user,
                     '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
                     '_TopLevelParent': time_value.get('_TopLevelParent'),
                     '_CostCenter': user['CostCenter'],
-                    '_Vendor': user[me.getSetting('vendorField')]
+                    '_Vendor': user[me.getSetting('vendorField')],
+                    '_WorkProduct': user_story,
+                    '_Feature': feature
                 },
                 time_value.getData())
             );
@@ -311,7 +320,31 @@ Ext.define("TSTopLevelTimeReport", {
                     return value.get('FormattedID');
                 }
             },
-            { dataIndex:'_User', text: 'User', renderer: function(value) { return value.UserName; } },
+            { dataIndex: '_Feature', text: 'Feature', renderer: function(v) {
+                if ( Ext.isEmpty(v) ) {
+                    return "";
+                }
+                return v.FormattedID;
+            } },
+            { dataIndex: '_WorkProduct', text: 'Story ID', renderer: function(v) {
+                if ( Ext.isEmpty(v) ) {
+                    return "";
+                }
+                return v.FormattedID;
+            } },
+            { dataIndex: '_WorkProduct', text: 'Story Name', renderer: function(v) {
+                if ( Ext.isEmpty(v) ) {
+                    return "";
+                }
+                return v.Name;
+            }  },
+            { dataIndex: '_WorkProduct', text: 'Project', renderer: function(v) {
+                if ( Ext.isEmpty(v) ) {
+                    return "";
+                }
+                return v.Project._refObjectName;
+            }  },
+            { dataIndex: '_User', text: 'User', renderer: function(value) { return value.UserName; } },
             { dataIndex: '_CostCenter', text:'Cost Center'},
             { dataIndex: '_Vendor', text:'Vendor' },
             { dataIndex: '_WeekStartString', text: 'Week Start' },
