@@ -132,7 +132,7 @@ Ext.define("TSTopLevelTimeReport", {
         
         Deft.Chain.pipeline([
             this._loadTime,
-            this._loadTopLevelItems,
+            this._loadHierarchyTree,
             this._filterForPI
         ],this).then({
             scope: this,
@@ -149,6 +149,9 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _loadTime: function() {
+        var deferred = Ext.create('Deft.Deferred');
+        var me = this;
+        
         this.setLoading("Loading timesheets...");
         
         var tev_filters = [{property:'ObjectID', operator: '>', value: 0 }];
@@ -165,9 +168,9 @@ Ext.define("TSTopLevelTimeReport", {
         
         var tev_config = {
             model:'TimeEntryValue',
-            limit: 'Infinity',
+            limit: 1,
+            pageSize: 1,
             filters: tev_filters,
-            
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString',
@@ -176,10 +179,49 @@ Ext.define("TSTopLevelTimeReport", {
             ]
         };
         
-       return this._loadWsapiRecords(tev_config);
+        var config_clone = Ext.clone(tev_config);
+        
+        Ext.create('Rally.data.wsapi.Store', tev_config).load({
+            callback : function(records, operation, successful) {
+                if (successful){
+                    var page_size = 200;
+                    
+                    var total = operation.resultSet.totalRecords;
+                    var page_count = Math.ceil(total / page_size);
+                    
+                    var promises = [];
+                    
+                    Ext.Array.each(_.range(1, page_count+1), function(page_index) {
+                        var config = Ext.clone(config_clone);
+                        
+                        config.pageSize = page_size;
+                        config.limit = page_size;
+                        config.currentPage = page_index;
+                        
+                        promises.push(function() { return me._loadWsapiRecords(config); });
+                    });
+                    
+                    Deft.Chain.parallel(promises,this).then({
+                        success: function(results) { 
+                            console.log('results');
+                            deferred.resolve(Ext.Array.flatten(results));
+                        },
+                        failure: function(msg) { 
+                            deferred.reject(msg);
+                        }
+                    });
+                    
+                } else {
+                    me.logger.log("Failed: ", operation);
+                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
+                }
+            }
+        });
+
+        return deferred.promise;
     },
     
-    _loadTopLevelItems: function(time_values) {
+    _loadHierarchyTree: function(time_values) {
         var deferred = Ext.create('Deft.Deferred');
         var me = this;
         
@@ -491,7 +533,7 @@ Ext.define("TSTopLevelTimeReport", {
             model: 'Defect',
             fetch: ['ObjectID']
         };
-        this.logger.log("Starting load:",config.model);
+        this.logger.log("Starting load:",config.model, config);
         Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
             callback : function(records, operation, successful) {
                 if (successful){
