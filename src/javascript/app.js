@@ -67,7 +67,7 @@ Ext.define("TSTopLevelTimeReport", {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._updateData();
+                        //this._updateData();
                     }
                 }
             }
@@ -85,7 +85,7 @@ Ext.define("TSTopLevelTimeReport", {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._updateData();
+                        //this._updateData();
                     }
                 }
             }
@@ -102,7 +102,15 @@ Ext.define("TSTopLevelTimeReport", {
         });
         
         var spacer = container.add({ xtype: 'container', flex: 1});
-        
+        container.add({
+            xtype: 'rallybutton',
+            text: 'Run',
+            margin: '0px 5px 0px 5px',
+            listeners: {
+                scope: this,
+                click: this._updateData
+            }
+        });
         if ( this.isExternal() ) {
             container.add({type:'container', html: '&nbsp;&nbsp;&nbsp;&nbsp;'});
         }
@@ -120,7 +128,6 @@ Ext.define("TSTopLevelTimeReport", {
             listeners: {
                 artifactchosen: function(dialog, selectedRecord){
                     this._selectedPI = selectedRecord;
-                    me._updateData();
                 },
                 scope: this
             }
@@ -533,7 +540,7 @@ Ext.define("TSTopLevelTimeReport", {
             model: 'Defect',
             fetch: ['ObjectID']
         };
-        this.logger.log("Starting load:",config.model, config);
+        this.logger.log("Starting load:",config.model);
         Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
             callback : function(records, operation, successful) {
                 if (successful){

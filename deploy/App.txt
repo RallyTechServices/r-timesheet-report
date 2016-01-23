@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Sat Jan 23 2016 12:27:08 GMT-0800 (PST) -->
+    <!--  Build Date: Sat Jan 23 2016 12:30:41 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sat Jan 23 2016 12:27:08 GMT-0800 (PST)";
-        var CHECKSUM = 21649465363;
+        var APP_BUILD_DATE = "Sat Jan 23 2016 12:30:41 GMT-0800 (PST)";
+        var CHECKSUM = 21843409454;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -437,7 +437,7 @@ Ext.define("TSTopLevelTimeReport", {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._updateData();
+                        //this._updateData();
                     }
                 }
             }
@@ -455,7 +455,7 @@ Ext.define("TSTopLevelTimeReport", {
                         dp.setValue(week_start);
                     }
                     if ( new_value.getDay() === 0 ) {
-                        this._updateData();
+                        //this._updateData();
                     }
                 }
             }
@@ -472,7 +472,15 @@ Ext.define("TSTopLevelTimeReport", {
         });
         
         var spacer = container.add({ xtype: 'container', flex: 1});
-        
+        container.add({
+            xtype: 'rallybutton',
+            text: 'Run',
+            margin: '0px 5px 0px 5px',
+            listeners: {
+                scope: this,
+                click: this._updateData
+            }
+        });
         if ( this.isExternal() ) {
             container.add({type:'container', html: '&nbsp;&nbsp;&nbsp;&nbsp;'});
         }
@@ -490,7 +498,6 @@ Ext.define("TSTopLevelTimeReport", {
             listeners: {
                 artifactchosen: function(dialog, selectedRecord){
                     this._selectedPI = selectedRecord;
-                    me._updateData();
                 },
                 scope: this
             }
@@ -903,7 +910,7 @@ Ext.define("TSTopLevelTimeReport", {
             model: 'Defect',
             fetch: ['ObjectID']
         };
-        this.logger.log("Starting load:",config.model, config);
+        this.logger.log("Starting load:",config.model);
         Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
             callback : function(records, operation, successful) {
                 if (successful){
