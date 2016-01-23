@@ -183,6 +183,9 @@ Ext.define("TSTopLevelTimeReport", {
         var deferred = Ext.create('Deft.Deferred');
         var me = this;
         
+        this.setLoading("Loading associated items...");
+
+        
         var oids = Ext.Array.map(time_values, function(time_value){
             var tei = time_value.get('TimeEntryItem');
             var workproduct = tei.WorkProduct;
@@ -197,9 +200,9 @@ Ext.define("TSTopLevelTimeReport", {
         var config = {
             fetch: ['_ItemHierarchy'],
             filters: [
+                { property: '__At', value:'current'},
                 { property: '_TypeHierarchy', value: 'HierarchicalRequirement'},
-                { property: 'ObjectID', operator:  'in', value: unique_oids },
-                { property: '__At', value:'current'}
+                { property: 'ObjectID', operator:  'in', value: unique_oids }
             ]
         };
         
@@ -233,6 +236,9 @@ Ext.define("TSTopLevelTimeReport", {
     
     _filterForPI: function(time_values) {
         var selected_pi = this._selectedPI;
+        this.setLoading("Applying filters...");
+
+        
         if ( Ext.isEmpty(selected_pi) ) { 
             return time_values;
         }
@@ -373,7 +379,9 @@ Ext.define("TSTopLevelTimeReport", {
         if ( Ext.isString(column_settings) ) {
             column_settings = Ext.JSON.decode(column_settings);
         }
-        return column_settings[column_name] && column_settings[column_name]['show'];
+        
+        
+        return column_settings && column_settings[column_name] && column_settings[column_name]['show'];
     },
     
     _getColumns: function() {
@@ -510,7 +518,11 @@ Ext.define("TSTopLevelTimeReport", {
                     deferred.resolve(records);
                 } else {
                     me.logger.log("Failed: ", operation);
-                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
+                    var message = "";
+                    if ( operation.error.errors ) {
+                        message = operation.error.errors.join('. ');
+                    }
+                    deferred.reject(message);
                 }
             }
         });
@@ -521,6 +533,8 @@ Ext.define("TSTopLevelTimeReport", {
         var deferred = Ext.create('Deft.Deferred');
         var me = this;
         var default_config = {
+            removeUnauthorizedSnapshots: true,
+            useHttpPost: true
         };
         this.logger.log("Starting load:",config);
         Ext.create('Rally.data.lookback.SnapshotStore', Ext.Object.merge(default_config,config)).load({
@@ -529,7 +543,11 @@ Ext.define("TSTopLevelTimeReport", {
                     deferred.resolve(records);
                 } else {
                     me.logger.log("Failed: ", operation);
-                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
+                    var message = "Cannot load Lookback records";
+                    if ( operation.error && operation.error.errors ) {
+                        message = operation.error.errors.join('. ');
+                    }
+                    deferred.reject(message);
                 }
             }
         });
