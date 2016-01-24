@@ -52,16 +52,24 @@ Ext.define("TSTopLevelTimeReport", {
             layout: 'vbox'
         });
         
-        var week_start = this._getBeginningOfWeek(new Date());
+        var default_week = this._getBeginningOfWeek(new Date());
+        
+        var state_prefix = 'rally.techservices.' + this.getAppId();
         
         date_container.add({
             xtype:'rallydatefield',
             itemId:'from_date_selector',
             fieldLabel: 'From Week',
-            value: week_start,
+            value: default_week,
+            stateful: true,
+            stateId: state_prefix + ".from_date",
+            stateEvents: ['change'],
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
+                    if ( Ext.isEmpty(new_value) ) {
+                        return;
+                    }
                     var week_start = this._getBeginningOfWeek(new_value);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
@@ -77,7 +85,10 @@ Ext.define("TSTopLevelTimeReport", {
             xtype:'rallydatefield',
             itemId:'to_date_selector',
             fieldLabel: 'Through Week',
-            value: week_start,
+            value: default_week,
+            stateful: true,
+            stateId: state_prefix + ".to_date",
+            stateEvents: ['change'],
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
@@ -699,6 +710,9 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _getBeginningOfWeek: function(js_date){
+        this.logger.log("Get beginning from ", js_date);
+        
+        if ( Ext.isEmpty(js_date) ) { return null; }
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());
         return start_of_week_here;
     },

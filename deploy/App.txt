@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Sun Jan 24 2016 10:42:52 GMT-0800 (PST) -->
+    <!--  Build Date: Sun Jan 24 2016 11:43:49 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Jan 24 2016 10:42:52 GMT-0800 (PST)";
-        var CHECKSUM = 21771203108;
+        var APP_BUILD_DATE = "Sun Jan 24 2016 11:43:49 GMT-0800 (PST)";
+        var CHECKSUM = 22416575835;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -422,16 +422,24 @@ Ext.define("TSTopLevelTimeReport", {
             layout: 'vbox'
         });
         
-        var week_start = this._getBeginningOfWeek(new Date());
+        var default_week = this._getBeginningOfWeek(new Date());
+        
+        var state_prefix = 'rally.techservices.' + this.getAppId();
         
         date_container.add({
             xtype:'rallydatefield',
             itemId:'from_date_selector',
             fieldLabel: 'From Week',
-            value: week_start,
+            value: default_week,
+            stateful: true,
+            stateId: state_prefix + ".from_date",
+            stateEvents: ['change'],
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
+                    if ( Ext.isEmpty(new_value) ) {
+                        return;
+                    }
                     var week_start = this._getBeginningOfWeek(new_value);
                     if ( week_start !== new_value ) {
                         dp.setValue(week_start);
@@ -447,7 +455,10 @@ Ext.define("TSTopLevelTimeReport", {
             xtype:'rallydatefield',
             itemId:'to_date_selector',
             fieldLabel: 'Through Week',
-            value: week_start,
+            value: default_week,
+            stateful: true,
+            stateId: state_prefix + ".to_date",
+            stateEvents: ['change'],
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
@@ -1069,6 +1080,9 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _getBeginningOfWeek: function(js_date){
+        this.logger.log("Get beginning from ", js_date);
+        
+        if ( Ext.isEmpty(js_date) ) { return null; }
         var start_of_week_here = Ext.Date.add(js_date, Ext.Date.DAY, -1 * js_date.getDay());
         return start_of_week_here;
     },
