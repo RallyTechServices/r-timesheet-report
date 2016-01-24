@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Sat Jan 23 2016 12:30:41 GMT-0800 (PST) -->
+    <!--  Build Date: Sun Jan 24 2016 10:42:52 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sat Jan 23 2016 12:30:41 GMT-0800 (PST)";
-        var CHECKSUM = 21843409454;
+        var APP_BUILD_DATE = "Sun Jan 24 2016 10:42:52 GMT-0800 (PST)";
+        var CHECKSUM = 21771203108;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -422,7 +422,7 @@ Ext.define("TSTopLevelTimeReport", {
             layout: 'vbox'
         });
         
-        var week_start = this._getBeginningOfWeek(Rally.util.DateTime.add(new Date(), 'week', -3));
+        var week_start = this._getBeginningOfWeek(new Date());
         
         date_container.add({
             xtype:'rallydatefield',
@@ -447,6 +447,7 @@ Ext.define("TSTopLevelTimeReport", {
             xtype:'rallydatefield',
             itemId:'to_date_selector',
             fieldLabel: 'Through Week',
+            value: week_start,
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
@@ -459,7 +460,7 @@ Ext.define("TSTopLevelTimeReport", {
                     }
                 }
             }
-        }).setValue(new Date());
+        });
         
         container.add({
             xtype: 'rallybutton',

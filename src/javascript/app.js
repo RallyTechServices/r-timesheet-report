@@ -52,7 +52,7 @@ Ext.define("TSTopLevelTimeReport", {
             layout: 'vbox'
         });
         
-        var week_start = this._getBeginningOfWeek(Rally.util.DateTime.add(new Date(), 'week', -3));
+        var week_start = this._getBeginningOfWeek(new Date());
         
         date_container.add({
             xtype:'rallydatefield',
@@ -77,6 +77,7 @@ Ext.define("TSTopLevelTimeReport", {
             xtype:'rallydatefield',
             itemId:'to_date_selector',
             fieldLabel: 'Through Week',
+            value: week_start,
             listeners: {
                 scope: this,
                 change: function(dp, new_value) {
@@ -89,7 +90,7 @@ Ext.define("TSTopLevelTimeReport", {
                     }
                 }
             }
-        }).setValue(new Date());
+        });
         
         container.add({
             xtype: 'rallybutton',
