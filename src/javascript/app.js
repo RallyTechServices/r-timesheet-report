@@ -103,7 +103,12 @@ Ext.define("TSTopLevelTimeReport", {
             }
         });
         
-        container.add({
+        var pi_container = container.add({
+            xtype:'container',
+            layout: 'vbox'
+        });
+        
+        pi_container.add({
             xtype: 'rallybutton',
             text: 'Choose Portfolio Item',
             margin: '0px 5px 0px 5px',
@@ -111,6 +116,13 @@ Ext.define("TSTopLevelTimeReport", {
                 scope: this,
                 click: this._launchPIPicker
             }
+        });
+        
+        pi_container.add({
+            xtype:'container',
+            itemId: 'pi_message',
+            margin: 7,
+            tpl: '<tpl>{FormattedID}: {Name}</tpl>'
         });
         
         var spacer = container.add({ xtype: 'container', flex: 1});
@@ -137,9 +149,14 @@ Ext.define("TSTopLevelTimeReport", {
             height: 250,
             title: 'Choose Portfolio Item',
             multiple: false,
+            _isArtifactEditable: function(record) {
+                //override so that viewers can still get a result
+                return true;
+            },
             listeners: {
                 artifactchosen: function(dialog, selectedRecord){
                     this._selectedPI = selectedRecord;
+                    this.down('#pi_message').update(this._selectedPI.getData());
                 },
                 scope: this
             }
