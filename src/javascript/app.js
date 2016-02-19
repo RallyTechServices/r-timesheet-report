@@ -143,16 +143,41 @@ Ext.define("TSTopLevelTimeReport", {
     _launchPIPicker: function() {
         var me = this;
         this._selectedPI = null;
-        Ext.create('Rally.ui.dialog.ArtifactChooserDialog', {
-            artifactTypes: ['portfolioitem'],
+        
+        Ext.create('Rally.technicalservices.ChooserDialog', {
+            artifactTypes: this.PortfolioItemNames,
             autoShow: true,
-            height: 250,
-            title: 'Choose Portfolio Item',
             multiple: false,
-            _isArtifactEditable: function(record) {
-                //override so that viewers can still get a result
-                return true;
-            },
+            title: 'Choose PortfolioItem',
+            filterableFields: [
+                {
+                    displayName: 'Formatted ID',
+                    attributeName: 'FormattedID'
+                },
+                {
+                    displayName: 'Name',
+                    attributeName: 'Name'
+                },
+                {
+                    displayName:'Project',
+                    attributeName: 'Project.Name'
+                },
+                {
+                    displayName:'Owner',
+                    attributeName: 'Owner'
+                }
+            ],
+            columns: [
+                {
+                    text: 'ID',
+                    dataIndex: 'FormattedID'
+                },
+                'Name',
+                'Project',
+                'Owner',
+                'State'
+            ],
+            fetchFields: ['ObjectID','FormattedID','Name'],
             listeners: {
                 artifactchosen: function(dialog, selectedRecord){
                     this._selectedPI = selectedRecord;
@@ -161,6 +186,25 @@ Ext.define("TSTopLevelTimeReport", {
                 scope: this
             }
          });
+             
+//        Ext.create('Rally.ui.dialog.ArtifactChooserDialog', {
+//            artifactTypes: ['portfolioitem'],
+//            autoShow: true,
+//            height: 250,
+//            title: 'Choose Portfolio Item',
+//            multiple: false,
+//            _isArtifactEditable: function(record) {
+//                //override so that viewers can still get a result
+//                return true;
+//            },
+//            listeners: {
+//                artifactchosen: function(dialog, selectedRecord){
+//                    this._selectedPI = selectedRecord;
+//                    this.down('#pi_message').update(this._selectedPI.getData());
+//                },
+//                scope: this
+//            }
+//         });
     },
     
     _updateData: function() {
