@@ -130,11 +130,27 @@ Ext.define("TSTopLevelTimeReport", {
             xtype: 'rallybutton',
             text: 'Run',
             margin: '0px 5px 0px 5px',
+            padding: 4,
             listeners: {
                 scope: this,
                 click: this._updateData
             }
         });
+        
+        container.add({
+            xtype:'rallybutton',
+            itemId:'export_button',
+            cls: 'secondary',
+            text: '<span class="icon-export"> </span>',
+            disabled: true,
+            listeners: {
+                scope: this,
+                click: function() {
+                    this._export();
+                }
+            }
+        });
+        
         if ( this.isExternal() ) {
             container.add({type:'container', html: '&nbsp;&nbsp;&nbsp;&nbsp;'});
         }
@@ -187,24 +203,6 @@ Ext.define("TSTopLevelTimeReport", {
             }
          });
              
-//        Ext.create('Rally.ui.dialog.ArtifactChooserDialog', {
-//            artifactTypes: ['portfolioitem'],
-//            autoShow: true,
-//            height: 250,
-//            title: 'Choose Portfolio Item',
-//            multiple: false,
-//            _isArtifactEditable: function(record) {
-//                //override so that viewers can still get a result
-//                return true;
-//            },
-//            listeners: {
-//                artifactchosen: function(dialog, selectedRecord){
-//                    this._selectedPI = selectedRecord;
-//                    this.down('#pi_message').update(this._selectedPI.getData());
-//                },
-//                scope: this
-//            }
-//         });
     },
     
     _updateData: function() {
@@ -494,6 +492,8 @@ Ext.define("TSTopLevelTimeReport", {
             enableBulkEdit: false,
             showPagingToolbar: false
         });
+        
+        this.down('#export_button').setDisabled(false);
     },
     
     _getColumnShowSetting: function(column_name) {
@@ -600,6 +600,30 @@ Ext.define("TSTopLevelTimeReport", {
                 hidden: !this._getColumnShowSetting('Hours')
             }
         ];
+    },
+    
+    _export: function(){
+        var grid = this.down('rallygrid');
+        var me = this;
+        
+        if ( !grid ) { return; }
+        
+        var filename = Ext.String.format('timesheet-report.csv');
+
+        this.setLoading("Generating CSV");
+        Deft.Chain.sequence([
+            function() { return Rally.technicalservices.FileUtilities.getCSVFromGrid(this,grid) } 
+        ]).then({
+            scope: this,
+            success: function(csv){
+                if (csv && csv.length > 0){
+                    Rally.technicalservices.FileUtilities.saveCSVToFile(csv,filename);
+                } else {
+                    Rally.ui.notify.Notifier.showWarning({message: 'No data to export'});
+                }
+                
+            }
+        }).always(function() { me.setLoading(false); });
     },
     
     _getUTCDate: function(value) {
