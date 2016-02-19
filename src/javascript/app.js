@@ -11,6 +11,7 @@ Ext.define("TSTopLevelTimeReport", {
     ],
     
     config: {
+        _selectedPIData: null,
         defaultSettings: {
             vendorField: 'MiddleName',
             columns: Ext.JSON.encode({
@@ -23,11 +24,26 @@ Ext.define("TSTopLevelTimeReport", {
             })
         }
     },
+    
+    stateful: true,
+    stateEvents: ['updateData'],
+    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIData',
 
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
     },
+    
+    getState: function() {
+        var me = this,
+            state = null;
 
+        state = {
+            _selectedPIData: this._selectedPIData
+        };
+
+        return state;
+    },
+    
     launch: function() {
         this._getPortfolioItemTypes().then({
             scope: this,
@@ -37,6 +53,7 @@ Ext.define("TSTopLevelTimeReport", {
                 });
                 
                 this._addSelectors(this.down('#selector_box'));
+                this.down('#pi_message').update(this._selectedPIData);
             },
             failure: function(msg) {
                 Ext.Msg.alert('Problem starting up', msg);
@@ -124,7 +141,7 @@ Ext.define("TSTopLevelTimeReport", {
             margin: 7,
             tpl: '<tpl>{FormattedID}: {Name}</tpl>'
         });
-        
+                
         var spacer = container.add({ xtype: 'container', flex: 1});
         container.add({
             xtype: 'rallybutton',
@@ -158,7 +175,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     _launchPIPicker: function() {
         var me = this;
-        this._selectedPI = null;
+        this._selectedPIData = null;
         
         Ext.create('Rally.technicalservices.ChooserDialog', {
             artifactTypes: this.PortfolioItemNames,
@@ -196,8 +213,8 @@ Ext.define("TSTopLevelTimeReport", {
             fetchFields: ['ObjectID','FormattedID','Name'],
             listeners: {
                 artifactchosen: function(dialog, selectedRecord){
-                    this._selectedPI = selectedRecord;
-                    this.down('#pi_message').update(this._selectedPI.getData());
+                    this._selectedPIData = selectedRecord.getData();
+                    this.down('#pi_message').update(this._selectedPIData);
                 },
                 scope: this
             }
@@ -207,6 +224,8 @@ Ext.define("TSTopLevelTimeReport", {
     
     _updateData: function() {
         this.down('#display_box').removeAll();
+        
+        this.fireEvent('updateData', this, this._selectedPIData);
         
         Deft.Chain.pipeline([
             this._loadTime,
@@ -281,7 +300,6 @@ Ext.define("TSTopLevelTimeReport", {
                     
                     Deft.Chain.parallel(promises,this).then({
                         success: function(results) { 
-                            console.log('results');
                             deferred.resolve(Ext.Array.flatten(results));
                         },
                         failure: function(msg) { 
@@ -355,7 +373,7 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _filterForPI: function(time_values) {
-        var selected_pi = this._selectedPI;
+        var selected_pi = this._selectedPIData;
         this.setLoading("Applying filters...");
 
         
@@ -365,7 +383,7 @@ Ext.define("TSTopLevelTimeReport", {
         //_TypeHierarchy
         var filtered_time_values = Ext.Array.filter(time_values, function(time_value) { 
             var type_hierarchy = time_value.get('_TypeHierarchy');
-            return Ext.Array.contains(type_hierarchy, parseInt(selected_pi.get('ObjectID')));
+            return Ext.Array.contains(type_hierarchy, parseInt(selected_pi.ObjectID));
         });
         
         return filtered_time_values;
