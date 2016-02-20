@@ -3,10 +3,10 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Fri Feb 19 2016 10:01:24 GMT-0800 (PST) -->
+    <!--  Build Date: Sat Feb 20 2016 11:21:37 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Feb 19 2016 10:01:24 GMT-0800 (PST)";
+        var APP_BUILD_DATE = "Sat Feb 20 2016 11:21:37 GMT-0800 (PST)";
         var CHECKSUM = [%= checksum %];
     </script>
     
@@ -40,6 +40,15 @@
     margin-top: 25px;
     margin-right: 5px;
     cursor: pointer;
+}
+
+.secondary-action-btn {
+    border: none;
+    background: none;
+}
+.secondary-action-btn span {
+    cursor: pointer;
+    color: #00a9e0;
 }
     </style>
 

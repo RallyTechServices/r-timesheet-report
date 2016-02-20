@@ -53,7 +53,7 @@ Ext.define("TSTopLevelTimeReport", {
                 });
                 
                 this._addSelectors(this.down('#selector_box'));
-                this.down('#pi_message').update(this._selectedPIData);
+                this._displaySelectedPIMessage();
             },
             failure: function(msg) {
                 Ext.Msg.alert('Problem starting up', msg);
@@ -97,7 +97,6 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             }
         });
-        
         date_container.add({
             xtype:'rallydatefield',
             itemId:'to_date_selector',
@@ -136,10 +135,18 @@ Ext.define("TSTopLevelTimeReport", {
         });
         
         pi_container.add({
-            xtype:'container',
-            itemId: 'pi_message',
-            margin: 7,
-            tpl: '<tpl>{FormattedID}: {Name}</tpl>'
+            xtype: 'container',
+            layout: 'hbox',
+            items: [{
+                xtype:'container',
+                itemId: 'pi_message',
+                margin: 7,
+                tpl: '<tpl>{FormattedID}: {Name}</tpl>'
+            },
+            { 
+                xtype:'container',
+                itemId:'pi_remove_button_container'
+            }]
         });
                 
         var spacer = container.add({ xtype: 'container', flex: 1});
@@ -214,12 +221,37 @@ Ext.define("TSTopLevelTimeReport", {
             listeners: {
                 artifactchosen: function(dialog, selectedRecord){
                     this._selectedPIData = selectedRecord.getData();
-                    this.down('#pi_message').update(this._selectedPIData);
+                    this._displaySelectedPIMessage();
                 },
                 scope: this
             }
          });
              
+    },
+    
+    _displaySelectedPIMessage: function() {
+        this.down('#pi_message').update(this._selectedPIData);
+        var remove_button_container = this.down('#pi_remove_button_container');
+        remove_button_container.removeAll();
+        
+        if ( !Ext.isEmpty(this._selectedPIData) ) {
+            remove_button_container.add({
+                xtype:'rallybutton',
+                itemId:'pi_remove_button',
+                cls: 'secondary-action-btn',
+                text: '<span class="icon-close"> </span>',
+                listeners: {
+                    scope: this,
+                    clicK: this._clearSelectedPI
+                }
+            });
+        }
+            
+    },
+    
+    _clearSelectedPI: function() {
+        this._selectedPIData = null;
+        this._displaySelectedPIMessage();
     },
     
     _updateData: function() {
