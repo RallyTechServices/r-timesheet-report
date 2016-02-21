@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Sat Feb 20 2016 17:12:43 GMT-0800 (PST) -->
+    <!--  Build Date: Sat Feb 20 2016 17:30:44 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sat Feb 20 2016 17:12:43 GMT-0800 (PST)";
-        var CHECKSUM = 110403709317;
+        var APP_BUILD_DATE = "Sat Feb 20 2016 17:30:44 GMT-0800 (PST)";
+        var CHECKSUM = 112580669835;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -1456,6 +1456,8 @@ Ext.define("TSTopLevelTimeReport", {
         {xtype:'container', itemId:'display_box' , region: 'center', layout: { type: 'fit'} }
     ],
     
+    projectContext: null,
+    
     config: {
         _selectedPIData: null,
         defaultSettings: {
@@ -1509,7 +1511,23 @@ Ext.define("TSTopLevelTimeReport", {
     
     _addSelectors: function(container) {
         container.removeAll();
-                
+        
+        if ( this.isExternal() ) {
+            container.add({
+                xtype:'rallyprojectpicker',
+                margin: '5 10 5 5',
+                workspace: this.getContext().getWorkspaceRef(),
+                fieldLabel: 'Project',
+                labelAlign: 'top',
+                listeners: {
+                    scope: this,
+                    change: function(cb) {
+                        this.projectContext = cb.getValue();
+                    }
+                }
+            });
+        }
+        
         var date_container = container.add({
             xtype:'container',
             layout: 'vbox'
@@ -1781,6 +1799,12 @@ Ext.define("TSTopLevelTimeReport", {
                         config.limit = page_size;
                         config.currentPage = page_index;
                         
+                        if (!Ext.isEmpty(me.projectContext)) {
+                            config.context = { 
+                                project: me.projectContext,
+                                projectScopeDown: true
+                            }
+                        }
                         promises.push(function() { return me._loadWsapiRecords(config); });
                     });
                     
@@ -1953,6 +1977,14 @@ Ext.define("TSTopLevelTimeReport", {
                 filters: Rally.data.wsapi.Filter.or(filters), 
                 fetch: ['FormattedID','Name','Parent','ObjectID']
             };
+            
+            if (!Ext.isEmpty(me.projectContext)) {
+                config.context = { 
+                    project: me.projectContext,
+                    projectScopeDown: true
+                }
+            }
+                        
             if ( search_everywhere ) {
                 config.context = { project: null };
             }

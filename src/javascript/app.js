@@ -10,6 +10,8 @@ Ext.define("TSTopLevelTimeReport", {
         {xtype:'container', itemId:'display_box' , region: 'center', layout: { type: 'fit'} }
     ],
     
+    projectContext: null,
+    
     config: {
         _selectedPIData: null,
         defaultSettings: {
@@ -63,7 +65,23 @@ Ext.define("TSTopLevelTimeReport", {
     
     _addSelectors: function(container) {
         container.removeAll();
-                
+        
+        if ( this.isExternal() ) {
+            container.add({
+                xtype:'rallyprojectpicker',
+                margin: '5 10 5 5',
+                workspace: this.getContext().getWorkspaceRef(),
+                fieldLabel: 'Project',
+                labelAlign: 'top',
+                listeners: {
+                    scope: this,
+                    change: function(cb) {
+                        this.projectContext = cb.getValue();
+                    }
+                }
+            });
+        }
+        
         var date_container = container.add({
             xtype:'container',
             layout: 'vbox'
@@ -335,6 +353,12 @@ Ext.define("TSTopLevelTimeReport", {
                         config.limit = page_size;
                         config.currentPage = page_index;
                         
+                        if (!Ext.isEmpty(me.projectContext)) {
+                            config.context = { 
+                                project: me.projectContext,
+                                projectScopeDown: true
+                            }
+                        }
                         promises.push(function() { return me._loadWsapiRecords(config); });
                     });
                     
@@ -507,6 +531,14 @@ Ext.define("TSTopLevelTimeReport", {
                 filters: Rally.data.wsapi.Filter.or(filters), 
                 fetch: ['FormattedID','Name','Parent','ObjectID']
             };
+            
+            if (!Ext.isEmpty(me.projectContext)) {
+                config.context = { 
+                    project: me.projectContext,
+                    projectScopeDown: true
+                }
+            }
+                        
             if ( search_everywhere ) {
                 config.context = { project: null };
             }
