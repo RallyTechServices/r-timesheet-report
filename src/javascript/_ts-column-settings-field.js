@@ -120,7 +120,6 @@ Ext.define('Rally.technicalservices.ColumnSettingsField', {
     },
 
     _buildSettingValue: function() {
-        console.log('--', this.gridColumns);
         var columns = {};
         this._store.each(function(record) {
             if (record.get('show')) {

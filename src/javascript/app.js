@@ -269,7 +269,15 @@ Ext.define("TSTopLevelTimeReport", {
                 this.setLoading(false);
                 
                 var rows = this._getRowsFromTime(time_values);
-                this._addGrid(this.down('#display_box'), rows);
+                this._addUpperLevelItems(rows).then({
+                    scope: this,
+                    success: function(results) {
+                        this._addGrid(this.down('#display_box'), results);
+                    },
+                    failure: function(msg){
+                        Ext.Msg.alert('Problem adding associated data',msg);
+                    }
+                });
             },
             failure: function(msg) {
                 Ext.Msg.alert('Problem loading users with timesheets', msg);
@@ -302,7 +310,7 @@ Ext.define("TSTopLevelTimeReport", {
             filters: tev_filters,
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
-                'Project','Feature','Task','TaskDisplayString',
+                'Project','Feature','Task','TaskDisplayString','Parent',
                 'User','UserName', 'CostCenter', 'FormattedID', 'Name', 
                 this.getSetting('vendorField')
             ]
@@ -404,6 +412,60 @@ Ext.define("TSTopLevelTimeReport", {
         return deferred.promise;
     },
     
+    _addUpperLevelItems: function(rows){
+        var deferred = Ext.create('Deft.Deferred');
+        var me = this;
+        
+        var short_names = Ext.Array.map(me.PortfolioItemNames, function(piname){
+            return piname.replace(/.*\//,'');
+        });
+        
+        if ( short_names.length < 3 ) {
+            return rows;
+        }
+        
+        var level_2_name = me.PortfolioItemNames[1];
+        var level_3_name = me.PortfolioItemNames[2];
+        
+        var oids = Ext.Array.map(rows, function(row){
+            return row[me.PortfolioItemNames[1]] && row[me.PortfolioItemNames[1]].ObjectID;
+        });
+                
+        me.setLoading('Loading Parent Tree...');
+
+        this._loadParentsFromOIDs(Ext.Array.unique(oids), true).then({
+            scope: this,
+            success: function(results) {
+                
+                var results_by_oid = {};
+                Ext.Array.each(results, function(result) {
+                    results_by_oid[result.get('ObjectID')] = result;
+                });
+                
+                Ext.Array.each(rows, function(row){
+                    var item = row[level_2_name];
+                    if ( item ) {
+                        var item_oid = item.ObjectID;
+                        
+                        if ( results_by_oid[item_oid] ) {
+                            row[level_3_name] = results_by_oid[item_oid].get('Parent');
+                        }
+                    }
+                });
+                
+                me.setLoading(false);
+                
+                deferred.resolve(rows);
+            },
+            failure: function(msg){
+                deferred.reject(msg);
+            }
+        });
+        
+        
+        return deferred.promise;
+    },
+    
     _filterForPI: function(time_values) {
         var selected_pi = this._selectedPIData;
         this.setLoading("Applying filters...");
@@ -421,7 +483,7 @@ Ext.define("TSTopLevelTimeReport", {
         return filtered_time_values;
     },
     
-    _loadParentsFromOIDs: function(parent_oids) {
+    _loadParentsFromOIDs: function(parent_oids, search_everywhere) {
         var me = this;
         var deferred = Ext.create('Deft.Deferred');
 
@@ -443,8 +505,11 @@ Ext.define("TSTopLevelTimeReport", {
             var config = { 
                 models:models, 
                 filters: Rally.data.wsapi.Filter.or(filters), 
-                fetch: ['FormattedID','Name']
+                fetch: ['FormattedID','Name','Parent','ObjectID']
             };
+            if ( search_everywhere ) {
+                config.context = { project: null };
+            }
             promises.push(function() { return this._loadWsapiArtifacts(config); });
         });
         Deft.Chain.sequence(promises,this).then({
@@ -507,29 +572,44 @@ Ext.define("TSTopLevelTimeReport", {
             var user_story = time_value.get('TimeEntryItem').WorkProduct;
             var feature = null;
             
-            if ( user_story ) {
-                feature = user_story.Feature;
+            var data = {
+                '_User': user,
+                '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
+                '_TopLevelParent': time_value.get('_TopLevelParent'),
+                '_CostCenter': user['CostCenter'],
+                '_Vendor': user[me.getSetting('vendorField')],
+                '_WorkProduct': user_story
+            };
+            
+            var short_names = Ext.Array.map(me.PortfolioItemNames, function(piname){
+                return piname.replace(/.*\//,'');
+            });
+            
+            if ( short_names.length > 0 ) {
+                data[me.PortfolioItemNames[0]] = user_story[short_names[0]];
             }
-            return Ext.create('TSTimesheetFinanceRow',
-                Ext.merge({
-                    '_User': user,
-                    '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
-                    '_TopLevelParent': time_value.get('_TopLevelParent'),
-                    '_CostCenter': user['CostCenter'],
-                    '_Vendor': user[me.getSetting('vendorField')],
-                    '_WorkProduct': user_story,
-                    '_Feature': feature
-                },
-                time_value.getData())
-            );
+            
+            if ( short_names.length > 1 ) {
+                data[me.PortfolioItemNames[1]] = null;
+                if ( data[me.PortfolioItemNames[0]] ) {
+                    data[me.PortfolioItemNames[1]] = data[me.PortfolioItemNames[0]].Parent;
+                }
+            }
+
+            if ( short_names.length > 2 ) {
+                data[me.PortfolioItemNames[2]] = null;
+                if ( data[me.PortfolioItemNames[1]] ) {
+                    data[me.PortfolioItemNames[2]] = data[me.PortfolioItemNames[1]].Parent;
+                }
+            }
+            
+            return Ext.merge( data, time_value.getData() );
         });
     },
     
     _addGrid: function(container, rows) {
-        this.logger.log('_addGrid', rows);
         var store = Ext.create('Rally.data.custom.Store',{ 
             data: rows, 
-            model: 'TSTimesheetFinanceRow',
             pageSize: 10000
         });
                 
@@ -552,60 +632,53 @@ Ext.define("TSTopLevelTimeReport", {
             column_settings = Ext.JSON.decode(column_settings);
         }
         
-        
         return column_settings && column_settings[column_name] && column_settings[column_name]['show'];
     },
     
     _getColumns: function() {
         var me = this;
-                
-        return [
-            { 
-                dataIndex: '_TopLevelParent', 
-                text: 'Top Level Work Item', 
-                hidden: !this._getColumnShowSetting('Top Level Work Item'),
-                renderer: function(value) { 
-                    if ( Ext.isEmpty(value) ) { return '' }
-                    return value.get('FormattedID');
-                }
-            },
-            { 
-                dataIndex: '_Feature', 
-                text: 'Feature', 
-                hidden: !this._getColumnShowSetting('Feature'),
+        var columns = [{ 
+            dataIndex: '_TopLevelParent', 
+            text: 'Top Level Work Item', 
+            hidden: !me._getColumnShowSetting('Top Level Work Item'),
+            renderer: function(value) { 
+                if ( Ext.isEmpty(value) ) { return '' }
+                return value.get('FormattedID') + ": " + value.get('_refObjectName');
+            }
+        }];
+        
+        Ext.Array.each(me.PortfolioItemNames, function(pi_name){
+            var short_name = pi_name.replace(/.*\//, '');
+            
+            columns.push({ 
+                dataIndex: pi_name, 
+                text: short_name, 
+                hidden: !me._getColumnShowSetting(short_name),
                 renderer: function(v) {
                     if ( Ext.isEmpty(v) ) {
                         return "";
                     }
-                    return v.FormattedID;
+                    return v.FormattedID + ": " + v._refObjectName;
                 }
-            },
+            });
+        });
+        
+        return Ext.Array.push(columns, [
             { 
                 dataIndex: '_WorkProduct', 
-                text: 'Story ID', 
-                hidden: !this._getColumnShowSetting('Story ID'),
+                text: 'Story', 
+                hidden: !me._getColumnShowSetting('Story'),
                 renderer: function(v) {
                     if ( Ext.isEmpty(v) ) {
                         return "";
                     }
-                    return v.FormattedID;
+                    return v.FormattedID + ": " + v._refObjectName;
                 } 
             },
             { 
                 dataIndex: '_WorkProduct', 
-                text: 'Story Name', 
-                hidden: !this._getColumnShowSetting('Story Name'),
-                renderer: function(v) {
-                    if ( Ext.isEmpty(v) ) {
-                        return "";
-                    }
-                    return v.Name;
-                }
-            },
-            { 
-                dataIndex: '_WorkProduct', 
                 text: 'Project', 
-                hidden: !this._getColumnShowSetting('Project'),
+                hidden: !me._getColumnShowSetting('Project'),
                 renderer: function(v) {
                     if ( Ext.isEmpty(v) ) {
                         return "";
@@ -616,7 +689,7 @@ Ext.define("TSTopLevelTimeReport", {
             { 
                 dataIndex: '_User', 
                 text: 'User', 
-                hidden: !this._getColumnShowSetting('User'),
+                hidden: !me._getColumnShowSetting('User'),
                 renderer: function(value) { 
                     return value.UserName; 
                 }
@@ -624,17 +697,17 @@ Ext.define("TSTopLevelTimeReport", {
             { 
                 dataIndex: '_CostCenter', 
                 text:'Cost Center',
-                hidden: !this._getColumnShowSetting('Cost Center')
+                hidden: !me._getColumnShowSetting('Cost Center')
             },
             { 
                 dataIndex: '_Vendor', 
                 text:'Vendor',
-                hidden: !this._getColumnShowSetting('Vendor')
+                hidden: !me._getColumnShowSetting('Vendor')
             },
             { 
                 dataIndex: '_WeekStartString', 
                 text: 'Week Start',
-                hidden: !this._getColumnShowSetting('Week Start')
+                hidden: !me._getColumnShowSetting('Week Start')
             },
             { 
                 dataIndex: 'DateVal', 
@@ -649,7 +722,7 @@ Ext.define("TSTopLevelTimeReport", {
                 text: 'Hours',
                 hidden: !this._getColumnShowSetting('Hours')
             }
-        ];
+        ]);
     },
     
     _export: function(){
