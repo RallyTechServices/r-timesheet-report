@@ -12,6 +12,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     projectContext: null,
     
+    // CHANGE HERE FOR EXTERNAL EXECUTION
     config: {
         _selectedPIData: null,
         defaultSettings: {
@@ -304,12 +305,11 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _loadTime: function() {
-        var deferred = Ext.create('Deft.Deferred');
         var me = this;
         
         this.setLoading("Loading timesheets...");
         
-        var tev_filters = [{property:'ObjectID', operator: '>', value: 0 }];
+        var tev_filters = [];
         
         if (this.down('#from_date_selector') ) {
             var start_date = Rally.util.DateTime.toIsoString( this.down('#from_date_selector').getValue(),false).replace(/T.*$/,'T00:00:00.000Z');
@@ -321,64 +321,27 @@ Ext.define("TSTopLevelTimeReport", {
             tev_filters.push({property:'TimeEntryItem.WeekStartDate', operator: '<=', value:start_date});
         }
         
-        var tev_config = {
+        var config = {
             model:'TimeEntryValue',
-            limit: 1,
-            pageSize: 1,
             filters: tev_filters,
             fetch: ['WeekStartDate','ObjectID','DateVal','Hours',
                 'TimeEntryItem','WorkProduct', 'WorkProductDisplayString',
                 'Project','Feature','Task','TaskDisplayString','Parent',
                 'User','UserName', 'CostCenter', 'FormattedID', 'Name', 
                 this.getSetting('vendorField')
-            ]
+            ],
+            sorters: [{ property:'CreationDate', direction:'ASC'}]
         };
         
-        var config_clone = Ext.clone(tev_config);
-        
-        Ext.create('Rally.data.wsapi.Store', tev_config).load({
-            callback : function(records, operation, successful) {
-                if (successful){
-                    var page_size = 200;
-                    
-                    var total = operation.resultSet.totalRecords;
-                    var page_count = Math.ceil(total / page_size);
-                    
-                    var promises = [];
-                    
-                    Ext.Array.each(_.range(1, page_count+1), function(page_index) {
-                        var config = Ext.clone(config_clone);
-                        
-                        config.pageSize = page_size;
-                        config.limit = page_size;
-                        config.currentPage = page_index;
-                        
-                        if (!Ext.isEmpty(me.projectContext)) {
-                            config.context = { 
-                                project: me.projectContext,
-                                projectScopeDown: true
-                            }
-                        }
-                        promises.push(function() { return me._loadWsapiRecords(config); });
-                    });
-                    
-                    Deft.Chain.parallel(promises,this).then({
-                        success: function(results) { 
-                            deferred.resolve(Ext.Array.flatten(results));
-                        },
-                        failure: function(msg) { 
-                            deferred.reject(msg);
-                        }
-                    });
-                    
-                } else {
-                    me.logger.log("Failed: ", operation);
-                    deferred.reject('Problem loading: ' + operation.error.errors.join('. '));
-                }
+        if (!Ext.isEmpty(me.projectContext)) {
+            config.context = { 
+                project: me.projectContext,
+                projectScopeDown: true
             }
-        });
-
-        return deferred.promise;
+        }
+        
+        return TSUtilities.loadWsapiRecordsWithParallelPages(config);
+        
     },
     
     _loadHierarchyTree: function(time_values) {
@@ -617,21 +580,25 @@ Ext.define("TSTopLevelTimeReport", {
                 return piname.replace(/.*\//,'');
             });
             
-            if ( short_names.length > 0 ) {
-                data[me.PortfolioItemNames[0]] = user_story[short_names[0]];
-            }
-            
-            if ( short_names.length > 1 ) {
-                data[me.PortfolioItemNames[1]] = null;
-                if ( data[me.PortfolioItemNames[0]] ) {
-                    data[me.PortfolioItemNames[1]] = data[me.PortfolioItemNames[0]].Parent;
+            if ( Ext.isEmpty(user_story) ) {
+                //me.logger.log('no user story', time_value);
+            } else {
+                if ( short_names.length > 0 ) {
+                    data[me.PortfolioItemNames[0]] = user_story[short_names[0]];
                 }
-            }
-
-            if ( short_names.length > 2 ) {
-                data[me.PortfolioItemNames[2]] = null;
-                if ( data[me.PortfolioItemNames[1]] ) {
-                    data[me.PortfolioItemNames[2]] = data[me.PortfolioItemNames[1]].Parent;
+                
+                if ( short_names.length > 1 ) {
+                    data[me.PortfolioItemNames[1]] = null;
+                    if ( data[me.PortfolioItemNames[0]] ) {
+                        data[me.PortfolioItemNames[1]] = data[me.PortfolioItemNames[0]].Parent;
+                    }
+                }
+    
+                if ( short_names.length > 2 ) {
+                    data[me.PortfolioItemNames[2]] = null;
+                    if ( data[me.PortfolioItemNames[1]] ) {
+                        data[me.PortfolioItemNames[2]] = data[me.PortfolioItemNames[1]].Parent;
+                    }
                 }
             }
             
@@ -640,9 +607,10 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _addGrid: function(container, rows) {
+        this.rows = rows;
         var store = Ext.create('Rally.data.custom.Store',{ 
             data: rows, 
-            pageSize: 10000
+            pageSize: 25
         });
                 
         container.add({
@@ -652,7 +620,7 @@ Ext.define("TSTopLevelTimeReport", {
             enableEditing: false,
             showRowActionsColumn: false,
             enableBulkEdit: false,
-            showPagingToolbar: false
+            showPagingToolbar: true
         });
         
         this.down('#export_button').setDisabled(false);
@@ -758,16 +726,18 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _export: function(){
-        var grid = this.down('rallygrid');
         var me = this;
+
+        var grid = this.down('rallygrid');
+        var rows = this.rows;
         
-        if ( !grid ) { return; }
+        if ( !grid && !rows ) { return; }
         
         var filename = Ext.String.format('timesheet-report.csv');
 
         this.setLoading("Generating CSV");
         Deft.Chain.sequence([
-            function() { return Rally.technicalservices.FileUtilities.getCSVFromGrid(this,grid) } 
+            function() { return Rally.technicalservices.FileUtilities.getCSVFromRows(this,grid,rows); } 
         ]).then({
             scope: this,
             success: function(csv){
@@ -792,7 +762,7 @@ Ext.define("TSTopLevelTimeReport", {
             model: 'Defect',
             fetch: ['ObjectID']
         };
-        this.logger.log("Starting load:",config.model);
+        //this.logger.log("Starting load:",config.model);
         Ext.create('Rally.data.wsapi.Store', Ext.Object.merge(default_config,config)).load({
             callback : function(records, operation, successful) {
                 if (successful){
@@ -812,7 +782,7 @@ Ext.define("TSTopLevelTimeReport", {
         var default_config = {
             fetch: ['ObjectID']
         };
-        this.logger.log("Starting load:",config);
+        //this.logger.log("Starting load:",config);
         Ext.create('Rally.data.wsapi.artifact.Store', Ext.Object.merge(default_config,config)).load({
             callback : function(records, operation, successful) {
                 if (successful){
@@ -837,7 +807,7 @@ Ext.define("TSTopLevelTimeReport", {
             removeUnauthorizedSnapshots: true,
             useHttpPost: true
         };
-        this.logger.log("Starting load:",config);
+        //this.logger.log("Starting load:",config);
         Ext.create('Rally.data.lookback.SnapshotStore', Ext.Object.merge(default_config,config)).load({
             callback : function(records, operation, successful) {
                 if (successful){
