@@ -727,20 +727,26 @@ Ext.define("TSTopLevelTimeReport", {
     
     _export: function(){
         var me = this;
-
+        this.logger.log('_export');
+        
         var grid = this.down('rallygrid');
         var rows = this.rows;
         
+        this.logger.log('number of rows:', rows.length);
+        
         if ( !grid && !rows ) { return; }
         
-        var filename = Ext.String.format('timesheet-report.csv');
+        var filename = 'timesheet-report.csv';
 
+        this.logger.log('saving file:', filename);
+        
         this.setLoading("Generating CSV");
         Deft.Chain.sequence([
             function() { return Rally.technicalservices.FileUtilities.getCSVFromRows(this,grid,rows); } 
         ]).then({
             scope: this,
             success: function(csv){
+                this.logger.log('got back csv ', csv.length);
                 if (csv && csv.length > 0){
                     Rally.technicalservices.FileUtilities.saveCSVToFile(csv,filename);
                 } else {
