@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Sun Feb 28 2016 10:39:39 GMT-0800 (PST) -->
+    <!--  Build Date: Wed Mar 02 2016 17:08:22 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Feb 28 2016 10:39:39 GMT-0800 (PST)";
-        var CHECKSUM = 97430788067;
+        var APP_BUILD_DATE = "Wed Mar 02 2016 17:08:22 GMT-0800 (PST)";
+        var CHECKSUM = 97641881685;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -62,7 +62,8 @@ Ext.define('TSUtilities', {
                     var config_clone = Ext.clone(config);
                     config_clone.currentPage = page_index;
                     promises.push(function() {
-                        Rally.getApp().setLoading("Loading page " + page_index + " of " + page_count);
+                        var percentage = parseInt( page_index * 100 / page_count, 10);
+                        Rally.getApp().setLoading("Loading time values (" + percentage + "%)");
                         return me.loadWsapiRecords(config_clone); 
                     });
                 });

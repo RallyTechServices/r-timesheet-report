@@ -45,7 +45,8 @@ Ext.define('TSUtilities', {
                     var config_clone = Ext.clone(config);
                     config_clone.currentPage = page_index;
                     promises.push(function() {
-                        Rally.getApp().setLoading("Loading page " + page_index + " of " + page_count);
+                        var percentage = parseInt( page_index * 100 / page_count, 10);
+                        Rally.getApp().setLoading("Loading time values (" + percentage + "%)");
                         return me.loadWsapiRecords(config_clone); 
                     });
                 });
