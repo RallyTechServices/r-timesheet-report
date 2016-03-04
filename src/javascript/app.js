@@ -29,7 +29,7 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     stateful: true,
-    stateEvents: ['updateData'],
+    stateEvents: ['updateData','columnsChosen'],
     stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIData',
 
     integrationHeaders : {
@@ -41,12 +41,22 @@ Ext.define("TSTopLevelTimeReport", {
             state = null;
 
         state = {
-            _selectedPIData: this._selectedPIData
+            _selectedPIData: this._selectedPIData,
+            columns: this.columns
         };
 
+        this.logger.log('Getting State:', state);
         return state;
     },
     
+    applyState: function(state) {
+        if (state) {
+            Ext.apply(this, state);
+        }
+        
+        console.log('apply state:', state);
+    },
+
     launch: function() {
         this._getPortfolioItemTypes().then({
             scope: this,
@@ -184,6 +194,8 @@ Ext.define("TSTopLevelTimeReport", {
                         this.down('rallygrid').reconfigure(undefined, this.columns);
                         this.down('rallygrid').getStore().reload();
                     }
+                    
+                    this.fireEvent('columnsChosen', columns);
                 }
             }
         });
@@ -689,7 +701,7 @@ Ext.define("TSTopLevelTimeReport", {
         });
 
         
-        return Ext.Array.push(columns, [
+        columns =  Ext.Array.push(columns, [
             { 
                 dataIndex: '_WorkProduct', 
                 text: 'Story', 
@@ -749,6 +761,10 @@ Ext.define("TSTopLevelTimeReport", {
                 hidden: !this._getColumnShowSetting('Hours')
             }
         ]);
+        
+        this.columns = columns;
+        
+        return columns;
     },
     
     _export: function(){
