@@ -169,6 +169,25 @@ Ext.define("TSTopLevelTimeReport", {
         });
                 
         var spacer = container.add({ xtype: 'container', flex: 1});
+        
+        container.add({
+            xtype:'tscolumnpickerbutton',
+            margin: '0px 5px 0px 5px',
+            cls: 'secondary big',
+            columns: this._getColumns(),
+            listeners: {
+                scope: this,
+                columnsChosen: function(button,columns) {
+                    this.logger.log('columns:', columns);
+                    this.columns = columns;
+                    if ( this.down('rallygrid') ) {
+                        this.down('rallygrid').reconfigure(undefined, this.columns);
+                        this.down('rallygrid').getStore().reload();
+                    }
+                }
+            }
+        });
+        
         container.add({
             xtype: 'rallybutton',
             text: 'Run',
@@ -350,7 +369,6 @@ Ext.define("TSTopLevelTimeReport", {
         
         this.setLoading("Loading associated items...");
 
-        
         var oids = Ext.Array.map(time_values, function(time_value){
             var tei = time_value.get('TimeEntryItem');
             var workproduct = tei.WorkProduct;
@@ -415,9 +433,8 @@ Ext.define("TSTopLevelTimeReport", {
         var level_3_name = me.PortfolioItemNames[2];
         
         var oids = Ext.Array.map(rows, function(row){
-            return row[me.PortfolioItemNames[1]] && row[me.PortfolioItemNames[1]].ObjectID;
-        });
-                
+            return row[level_2_name] && row[level_2_name].ObjectID;
+        });        
         me.setLoading('Loading Parent Tree...');
 
         this._loadParentsFromOIDs(Ext.Array.unique(oids), true).then({
@@ -576,6 +593,8 @@ Ext.define("TSTopLevelTimeReport", {
                 '_WorkProduct': user_story
             };
             
+            Ext.Array.each(me.PortfolioItemNames, function(name) { data[name] = null; });
+            
             var short_names = Ext.Array.map(me.PortfolioItemNames, function(piname){
                 return piname.replace(/.*\//,'');
             });
@@ -583,19 +602,17 @@ Ext.define("TSTopLevelTimeReport", {
             if ( Ext.isEmpty(user_story) ) {
                 //me.logger.log('no user story', time_value);
             } else {
-                if ( short_names.length > 0 ) {
+                if ( short_names.length > 0 && !Ext.isEmpty(user_story[short_names[0]]) ) {
                     data[me.PortfolioItemNames[0]] = user_story[short_names[0]];
                 }
                 
                 if ( short_names.length > 1 ) {
-                    data[me.PortfolioItemNames[1]] = null;
                     if ( data[me.PortfolioItemNames[0]] ) {
                         data[me.PortfolioItemNames[1]] = data[me.PortfolioItemNames[0]].Parent;
                     }
                 }
     
                 if ( short_names.length > 2 ) {
-                    data[me.PortfolioItemNames[2]] = null;
                     if ( data[me.PortfolioItemNames[1]] ) {
                         data[me.PortfolioItemNames[2]] = data[me.PortfolioItemNames[1]].Parent;
                     }
@@ -613,13 +630,14 @@ Ext.define("TSTopLevelTimeReport", {
             pageSize: 25
         });
                 
-        container.add({
+        this.grid = container.add({
             xtype:'rallygrid',
             store: store,
             columnCfgs: this._getColumns(),
             enableEditing: false,
             showRowActionsColumn: false,
             enableBulkEdit: false,
+            enableColumnHide: false,
             showPagingToolbar: true
         });
         
@@ -636,18 +654,14 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _getColumns: function() {
+        var columns = [];
         var me = this;
-        var columns = [{ 
-            dataIndex: '_TopLevelParent', 
-            text: 'Top Level Work Item', 
-            hidden: !me._getColumnShowSetting('Top Level Work Item'),
-            renderer: function(value) { 
-                if ( Ext.isEmpty(value) ) { return '' }
-                return value.get('FormattedID') + ": " + value.get('_refObjectName');
-            }
-        }];
         
-        Ext.Array.each(me.PortfolioItemNames, function(pi_name){
+        if ( !Ext.isEmpty(this.columns) ) {
+            return this.columns;
+        }
+        
+        Ext.Array.each(Ext.Array.clone(me.PortfolioItemNames).reverse(), function(pi_name){
             var short_name = pi_name.replace(/.*\//, '');
             
             columns.push({ 
@@ -662,6 +676,18 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             });
         });
+        
+        columns.push({ 
+            dataIndex: '_TopLevelParent', 
+            text: 'Top Level Work Item', 
+            hidden: !me._getColumnShowSetting('Top Level Work Item'),
+            selected: true,
+            renderer: function(value) { 
+                if ( Ext.isEmpty(value) ) { return '' }
+                return value.get('FormattedID') + ": " + value.get('_refObjectName');
+            }
+        });
+
         
         return Ext.Array.push(columns, [
             { 
@@ -877,9 +903,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     getSettingsFields: function() {
         var me = this;
-        
-        var columns = this._getColumns();
-        
+                
         return [{
             name: 'vendorField',
             xtype: 'rallyfieldcombobox',
@@ -897,21 +921,6 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             },
             readyEvent: 'ready'
-        },
-            
-        {
-            name: 'columns',
-            readyEvent: 'ready',
-            fieldLabel: 'Columns',
-            margin: '5px 0 0 12px',
-            xtype: 'tscolumnsettingsfield',
-            gridColumns: columns,
-            listeners: {
-                ready: function() {
-                    this.fireEvent('columnsettingsready');
-                }
-            },
-            bubbleEvents: 'columnsettingsready'
         }];
     },
     

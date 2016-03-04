@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 Rally Software Development Corp.  All Rights Reserved. -->
-    <!--  Build Date: Wed Mar 02 2016 17:08:22 GMT-0800 (PST) -->
+    <!--  Build Date: Thu Mar 03 2016 16:40:45 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Wed Mar 02 2016 17:08:22 GMT-0800 (PST)";
-        var CHECKSUM = 97641881685;
+        var APP_BUILD_DATE = "Thu Mar 03 2016 16:40:45 GMT-0800 (PST)";
+        var CHECKSUM = 115486340141;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -1176,6 +1176,217 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
     }
 });
 
+Ext.define('CA.technicalservices.ColumnPickerDialog',{
+    extend: 'Rally.ui.dialog.Dialog',
+    alias: 'widget.tscolumnpickerdialog',
+    
+    width: 200,
+    closable: true,
+    
+    config: {
+        /**
+         * @cfg {String}
+         * Title to give to the dialog
+         */
+        title: 'Choose Columns',
+        /**
+         * @cfg {Boolean}
+         * Allow multiple selection or not
+         */
+        multiple: true,
+        /**
+         * 
+         * @cfg [{Ext.Column.column}]  columns that
+         * can be chosen.  hidden = false means chosen to 
+         * show.
+         *  
+         */
+        pickableColumns: [],
+        
+        selectionButtonText: 'Apply'
+        
+    },
+    
+    items: [{
+        xtype: 'panel',
+        border: false,
+        items: [{
+            xtype:'container', 
+            itemId:'grid_container',
+            layout: 'fit',
+            height: 325
+        }]
+    }],
+
+    constructor: function(config) {
+        this.mergeConfig(config);
+
+        this.callParent([this.config]);
+    },
+
+    initComponent: function() {
+        this.callParent(arguments);
+        this.addEvents(
+            /**
+             * @event columnsChosen
+             * Fires when user clicks done after choosing columns
+             * @param {CA.technicalservices.ColumnPickerDialog} this dialog
+             * @param [{Ext.column.Column}] columns with hidden marked true/false as appropriate
+             */
+            'columnsChosen'
+        );
+        
+        this._buildButtons();
+        //this._buildSearchBar();
+        this._buildGrid();
+    },
+    
+    _buildButtons: function() {
+        this.down('panel').addDocked({
+            xtype: 'toolbar',
+            dock: 'bottom',
+            padding: '0 0 10 0',
+            layout: {
+                type: 'hbox',
+                pack: 'center'
+            },
+            ui: 'footer',
+            items: [
+                {
+                    xtype: 'rallybutton',
+                    text: this.selectionButtonText,
+                    cls: 'primary small',
+                    scope: this,
+                    userAction: 'clicked done in dialog',
+                    handler: function() {
+                        var selectedRecords = this.getRecordsWithSelection();
+                        this.fireEvent('columnsChosen', this, selectedRecords);
+                        this.close();
+                    }
+                },
+                {
+                    xtype: 'rallybutton',
+                    text: 'Cancel',
+                    cls: 'secondary small',
+                    handler: this.close,
+                    scope: this,
+                    ui: 'link'
+                }
+            ]
+        });
+    },
+    
+    _buildGrid: function() {
+        var mode = this.multiple ? 'MULTI' : 'SINGLE';
+        this.selectionModel = Ext.create('Rally.ui.selection.CheckboxModel', {
+            mode: mode,
+            allowDeselect: true
+        });
+        
+        var pickableColumns = this.pickableColumns;
+        
+        var store = Ext.create('Rally.data.custom.Store',{
+            data: this.pickableColumns
+        });
+        
+        
+        this.grid = Ext.create('Rally.ui.grid.Grid', {
+            selModel: this.selectionModel,
+            enableColumnHide: false,
+            enableColumnMove: false,
+            columnCfgs: this._getGridColumns(),
+            showPagingToolbar: false,
+            store: store,
+            listeners: {
+                viewready: function(grid) {
+                    var selectionModel = grid.getSelectionModel();
+                    
+                    Ext.Array.each(pickableColumns, function(col, idx){
+                        if ( !col.hidden ) {
+                            selectionModel.select(grid.store.data.items[idx],true);
+                        }
+                    });
+                }
+            }
+        });
+        
+        this.down('#grid_container').add(this.grid);
+    },
+    
+    _getGridColumns: function() {
+        return [
+            { dataIndex: 'text', flex: 1 }
+        ];
+    },
+    
+    getRecordsWithSelection: function() {
+        var selected_items = this.grid.getSelectionModel().getSelection(); 
+        var selected_items_by_dataindex = {};
+        Ext.Array.each(selected_items, function(selected_item){
+            selected_items_by_dataindex[selected_item.get('text')] = selected_item.getData();
+        });
+        
+        Ext.Array.each(this.pickableColumns, function(pickableColumn){
+            pickableColumn.hidden = Ext.isEmpty(selected_items_by_dataindex[pickableColumn.text]);
+        });
+        
+        return this.pickableColumns;
+    }
+});
+Ext.define('CA.technicalservices.ColumnPickerButton',{
+    extend: 'Rally.ui.Button',
+    requires: [
+        'CA.technicalservices.ColumnPickerDialog'
+    ],
+    
+    alias: 'widget.tscolumnpickerbutton',
+    
+    config: {
+        columns: [],
+        text: '<span class="icon-add-column"> </span>'
+
+    },
+    
+    constructor:function (config) {
+        this.mergeConfig(config);
+
+        this.callParent([this.config]);
+    },
+    
+    initComponent: function() {
+        this.callParent(arguments);
+        this.addEvents(
+            /**
+             * @event columnsChosen
+             * Fires when user clicks done after choosing columns
+             * @param {CA.technicalservices.ColumnPickerButton} this button
+             * @param [{Ext.column.Column}] columns with hidden marked true/false as appropriate
+             */
+            'columnsChosen'
+        );
+    },
+    
+    afterRender: function() {
+        this.callParent(arguments);
+        this.mon(this.el, this.clickEvent, this._showDialog, this);
+
+    },
+    
+    _showDialog: function() {
+        var me = this;
+        Ext.create('CA.technicalservices.ColumnPickerDialog',{
+            autoShow: true,
+            pickableColumns: this.columns,
+            listeners: {
+                scope: this,
+                columnsChosen: function(dialog, columns) {
+                    this.fireEvent('columnsChosen', me, columns);
+                }
+                
+            }
+        });
+    }
+});
 /**
  * Allows configuration of wip and schedule state mapping for kanban columns
  *
@@ -1520,6 +1731,25 @@ Ext.define("TSTopLevelTimeReport", {
         });
                 
         var spacer = container.add({ xtype: 'container', flex: 1});
+        
+        container.add({
+            xtype:'tscolumnpickerbutton',
+            margin: '0px 5px 0px 5px',
+            cls: 'secondary big',
+            columns: this._getColumns(),
+            listeners: {
+                scope: this,
+                columnsChosen: function(button,columns) {
+                    this.logger.log('columns:', columns);
+                    this.columns = columns;
+                    if ( this.down('rallygrid') ) {
+                        this.down('rallygrid').reconfigure(undefined, this.columns);
+                        this.down('rallygrid').getStore().reload();
+                    }
+                }
+            }
+        });
+        
         container.add({
             xtype: 'rallybutton',
             text: 'Run',
@@ -1701,7 +1931,6 @@ Ext.define("TSTopLevelTimeReport", {
         
         this.setLoading("Loading associated items...");
 
-        
         var oids = Ext.Array.map(time_values, function(time_value){
             var tei = time_value.get('TimeEntryItem');
             var workproduct = tei.WorkProduct;
@@ -1766,9 +1995,8 @@ Ext.define("TSTopLevelTimeReport", {
         var level_3_name = me.PortfolioItemNames[2];
         
         var oids = Ext.Array.map(rows, function(row){
-            return row[me.PortfolioItemNames[1]] && row[me.PortfolioItemNames[1]].ObjectID;
-        });
-                
+            return row[level_2_name] && row[level_2_name].ObjectID;
+        });        
         me.setLoading('Loading Parent Tree...');
 
         this._loadParentsFromOIDs(Ext.Array.unique(oids), true).then({
@@ -1927,6 +2155,8 @@ Ext.define("TSTopLevelTimeReport", {
                 '_WorkProduct': user_story
             };
             
+            Ext.Array.each(me.PortfolioItemNames, function(name) { data[name] = null; });
+            
             var short_names = Ext.Array.map(me.PortfolioItemNames, function(piname){
                 return piname.replace(/.*\//,'');
             });
@@ -1934,19 +2164,17 @@ Ext.define("TSTopLevelTimeReport", {
             if ( Ext.isEmpty(user_story) ) {
                 //me.logger.log('no user story', time_value);
             } else {
-                if ( short_names.length > 0 ) {
+                if ( short_names.length > 0 && !Ext.isEmpty(user_story[short_names[0]]) ) {
                     data[me.PortfolioItemNames[0]] = user_story[short_names[0]];
                 }
                 
                 if ( short_names.length > 1 ) {
-                    data[me.PortfolioItemNames[1]] = null;
                     if ( data[me.PortfolioItemNames[0]] ) {
                         data[me.PortfolioItemNames[1]] = data[me.PortfolioItemNames[0]].Parent;
                     }
                 }
     
                 if ( short_names.length > 2 ) {
-                    data[me.PortfolioItemNames[2]] = null;
                     if ( data[me.PortfolioItemNames[1]] ) {
                         data[me.PortfolioItemNames[2]] = data[me.PortfolioItemNames[1]].Parent;
                     }
@@ -1964,13 +2192,14 @@ Ext.define("TSTopLevelTimeReport", {
             pageSize: 25
         });
                 
-        container.add({
+        this.grid = container.add({
             xtype:'rallygrid',
             store: store,
             columnCfgs: this._getColumns(),
             enableEditing: false,
             showRowActionsColumn: false,
             enableBulkEdit: false,
+            enableColumnHide: false,
             showPagingToolbar: true
         });
         
@@ -1987,18 +2216,14 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _getColumns: function() {
+        var columns = [];
         var me = this;
-        var columns = [{ 
-            dataIndex: '_TopLevelParent', 
-            text: 'Top Level Work Item', 
-            hidden: !me._getColumnShowSetting('Top Level Work Item'),
-            renderer: function(value) { 
-                if ( Ext.isEmpty(value) ) { return '' }
-                return value.get('FormattedID') + ": " + value.get('_refObjectName');
-            }
-        }];
         
-        Ext.Array.each(me.PortfolioItemNames, function(pi_name){
+        if ( !Ext.isEmpty(this.columns) ) {
+            return this.columns;
+        }
+        
+        Ext.Array.each(Ext.Array.clone(me.PortfolioItemNames).reverse(), function(pi_name){
             var short_name = pi_name.replace(/.*\//, '');
             
             columns.push({ 
@@ -2013,6 +2238,18 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             });
         });
+        
+        columns.push({ 
+            dataIndex: '_TopLevelParent', 
+            text: 'Top Level Work Item', 
+            hidden: !me._getColumnShowSetting('Top Level Work Item'),
+            selected: true,
+            renderer: function(value) { 
+                if ( Ext.isEmpty(value) ) { return '' }
+                return value.get('FormattedID') + ": " + value.get('_refObjectName');
+            }
+        });
+
         
         return Ext.Array.push(columns, [
             { 
@@ -2228,9 +2465,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     getSettingsFields: function() {
         var me = this;
-        
-        var columns = this._getColumns();
-        
+                
         return [{
             name: 'vendorField',
             xtype: 'rallyfieldcombobox',
@@ -2248,21 +2483,6 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             },
             readyEvent: 'ready'
-        },
-            
-        {
-            name: 'columns',
-            readyEvent: 'ready',
-            fieldLabel: 'Columns',
-            margin: '5px 0 0 12px',
-            xtype: 'tscolumnsettingsfield',
-            gridColumns: columns,
-            listeners: {
-                ready: function() {
-                    this.fireEvent('columnsettingsready');
-                }
-            },
-            bubbleEvents: 'columnsettingsready'
         }];
     },
     
@@ -2335,6 +2555,10 @@ Ext.define("TSTopLevelTimeReport", {
 .secondary-action-btn span {
     cursor: pointer;
     color: #00a9e0;
+}
+
+.big {
+    font-size: 16px;
 }
     </style>
 
