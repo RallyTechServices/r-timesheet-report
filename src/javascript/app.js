@@ -29,7 +29,7 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     stateful: true,
-    stateEvents: ['updateData','columnsChosen'],
+    stateEvents: ['updateData','columnsChosen','columnmoved','columnresize'],
     stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIData',
 
     integrationHeaders : {
@@ -45,7 +45,6 @@ Ext.define("TSTopLevelTimeReport", {
             columns: this.columns
         };
 
-        this.logger.log('Getting State:', state);
         return state;
     },
     
@@ -53,8 +52,6 @@ Ext.define("TSTopLevelTimeReport", {
         if (state) {
             Ext.apply(this, state);
         }
-        
-        console.log('apply state:', state);
     },
 
     launch: function() {
@@ -650,7 +647,40 @@ Ext.define("TSTopLevelTimeReport", {
             showRowActionsColumn: false,
             enableBulkEdit: false,
             enableColumnHide: false,
-            showPagingToolbar: true
+            showPagingToolbar: true,
+            listeners: {
+                scope: this,
+                columnmove: function(header_container,column,fromIdx,toIdx) {
+                    console.log('moved:', column);
+                    var columns_by_text = {};
+                    Ext.Array.each(this.columns, function(column) {
+                        columns_by_text[column.text] = column;
+                    });
+                    
+                    console.log(header_container);
+                    console.log(header_container.getGridColumns());
+                    
+                    var columns_in_order = [];
+                    
+                    Ext.Array.each(header_container.getGridColumns( ), function(column){
+                        columns_in_order.push(columns_by_text[column.text]);
+                    });
+                    
+                    this.columns = columns_in_order;
+                    
+                    this.fireEvent('columnmoved',this.columns);
+                    
+                },
+                columnresize: function(header_container,column,width){
+                    Ext.Array.each(this.columns, function(col){
+                        if ( col.text == column.text ) {
+                            col.width = column.width;
+                        }
+                    });
+                    
+                    this.fireEvent('columnresize',this.columns);
+                }
+            }
         });
         
         this.down('#export_button').setDisabled(false);
@@ -668,10 +698,6 @@ Ext.define("TSTopLevelTimeReport", {
     _getColumns: function() {
         var columns = [];
         var me = this;
-        
-        if ( !Ext.isEmpty(this.columns) ) {
-            return this.columns;
-        }
         
         Ext.Array.each(Ext.Array.clone(me.PortfolioItemNames).reverse(), function(pi_name){
             var short_name = pi_name.replace(/.*\//, '');
@@ -761,6 +787,22 @@ Ext.define("TSTopLevelTimeReport", {
                 hidden: !this._getColumnShowSetting('Hours')
             }
         ]);
+        
+        if ( !Ext.isEmpty(this.columns) ) {
+            // columns saved as state lose their renderer functions
+            var columns_by_text = {};
+            Ext.Array.each(columns, function(column) {
+                columns_by_text[column.text] = column;
+            });
+            
+            Ext.Array.each(this.columns, function(column){
+                var cfg = columns_by_text[column.text];
+                if ( cfg && cfg.renderer ) {
+                    column.renderer = cfg.renderer;
+                }
+            });
+            return this.columns;
+        }
         
         this.columns = columns;
         
