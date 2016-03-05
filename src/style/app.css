@@ -28,3 +28,13 @@
 .big {
     font-size: 16px;
 }
+
+
+td.ts-total-cell {
+    background-color: #eee !important;
+}
+
+.x-grid-row-summary {
+    background-color: #eee;
+}
+

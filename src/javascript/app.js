@@ -19,10 +19,10 @@ Ext.define("TSTopLevelTimeReport", {
             vendorField: 'MiddleName',
             columns: Ext.JSON.encode({
                 'User': {show: true},
-                'Cost Center': {show: true},
-                'Vendor': {show: true},
-                'Week Start': {show: true},
-                'Date': {show: true},
+                'Cost Center': {show: false},
+                'Vendor': {show: false},
+                'Week Start': {show: false},
+                'Date': {show: false},
                 'Hours': {show: true}
             })
         }
@@ -594,6 +594,7 @@ Ext.define("TSTopLevelTimeReport", {
             var feature = null;
             
             var data = {
+                '__SecretKey': 1,
                 '_User': user,
                 '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
                 '_TopLevelParent': time_value.get('_TopLevelParent'),
@@ -634,9 +635,11 @@ Ext.define("TSTopLevelTimeReport", {
     
     _addGrid: function(container, rows) {
         this.rows = rows;
+        
         var store = Ext.create('Rally.data.custom.Store',{ 
             data: rows, 
-            pageSize: 25
+            pageSize: 25,
+            groupField: '__SecretKey'
         });
                 
         this.grid = container.add({
@@ -648,17 +651,23 @@ Ext.define("TSTopLevelTimeReport", {
             enableBulkEdit: false,
             enableColumnHide: false,
             showPagingToolbar: true,
+            sortableColumns: true,
+            enableColumnMove: true,
+            features: [{
+                ftype: 'groupingsummary',
+                startCollapsed: false,
+                hideGroupedHeader: true,
+                groupHeaderTpl: ' ',
+                enableGroupingMenu: false,
+                showSummaryRow: true
+            }],
             listeners: {
                 scope: this,
                 columnmove: function(header_container,column,fromIdx,toIdx) {
-                    console.log('moved:', column);
                     var columns_by_text = {};
                     Ext.Array.each(this.columns, function(column) {
                         columns_by_text[column.text] = column;
                     });
-                    
-                    console.log(header_container);
-                    console.log(header_container.getGridColumns());
                     
                     var columns_in_order = [];
                     
@@ -726,7 +735,6 @@ Ext.define("TSTopLevelTimeReport", {
             }
         });
 
-        
         columns =  Ext.Array.push(columns, [
             { 
                 dataIndex: '_WorkProduct', 
@@ -778,13 +786,15 @@ Ext.define("TSTopLevelTimeReport", {
                 text: 'Date', 
                 hidden: !this._getColumnShowSetting('Date'),
                 renderer: function(value) { 
+                    if ( Ext.isEmpty(value) ) { return ""; }
                     return me._getUTCDate(value); 
                 }
             },
             { 
                 dataIndex: 'Hours', 
                 text: 'Hours',
-                hidden: !this._getColumnShowSetting('Hours')
+                summaryType: 'sum',
+                hidden: false
             }
         ]);
         
@@ -795,10 +805,22 @@ Ext.define("TSTopLevelTimeReport", {
                 columns_by_text[column.text] = column;
             });
             
+            // since columns can go away, show the word "TOTAL" in
+            // the first visible column unless it has a summaryType
+            var assigned_total_string_column = false;
             Ext.Array.each(this.columns, function(column){
                 var cfg = columns_by_text[column.text];
                 if ( cfg && cfg.renderer ) {
                     column.renderer = cfg.renderer;
+                }
+                
+                if ( cfg && !column.hidden && Ext.isEmpty(column.summaryType) ) {
+                    if ( !assigned_total_string_column ) {
+                        assigned_total_string_column = true;
+                        column.summaryRenderer = function() {
+                            return "TOTAL";
+                        }
+                    }
                 }
             });
             return this.columns;
