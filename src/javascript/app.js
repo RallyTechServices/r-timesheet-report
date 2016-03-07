@@ -349,6 +349,9 @@ Ext.define("TSTopLevelTimeReport", {
             tev_filters.push({property:'TimeEntryItem.WeekStartDate', operator: '<=', value:start_date});
         }
         
+        // UNCOMMENT AND MODIFY TO RESTRICT TO VENDOR:
+        // tev_filters.push({property:'TimeEntryItem.User.' + this.getSetting('vendorField'), value: 'VENDOR'});
+        
         var config = {
             model:'TimeEntryValue',
             filters: tev_filters,

@@ -1,17 +1,36 @@
-<!DOCTYPE html>
-<html>
-<head>
+<!-- for confluence, the head/body tags interfere with rendering -->
+
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun Mar 06 2016 16:32:55 GMT-0800 (PST) -->
+    <!--  Build Date: Sun Mar 06 2016 16:14:47 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Mar 06 2016 16:32:55 GMT-0800 (PST)";
-        var CHECKSUM = 124600414150;
+        var APP_BUILD_DATE = "Sun Mar 06 2016 16:14:47 GMT-0800 (PST)";
     </script>
     
-    <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
+    <script type="text/javascript" src="/apps/2.0/sdk-debug.js?apiKey=__PUT_API_KEY_HERE__"></script>
 
+<!-- for confluence, don't render as a viewport, so we override the app creation step -->
+
+    <script type="text/javascript">
+        Ext.override(Rally.sdk.Bootstrapper,{
+            _launchAppInViewport: function (className, settings, timeboxScope) {
+                console.log('_launchAppInViewport');
+                this._wireIoHeaderHandlers();
+                this.app = this._createApp(className, settings, timeboxScope);
+    
+                Ext.create('Ext.container.Container', {
+                    layout: 'fit',
+                    items: [ this.app ],
+                    renderTo: 'tech_services_target',
+                    height: 800,
+                    width: 800
+                });
+            }
+        });
+        
+    </script>
+    
     <script type="text/javascript">
         Rally.onReady(function() {
              
@@ -1911,9 +1930,6 @@ Ext.define("TSTopLevelTimeReport", {
             tev_filters.push({property:'TimeEntryItem.WeekStartDate', operator: '<=', value:start_date});
         }
         
-        // UNCOMMENT AND MODIFY TO RESTRICT TO VENDOR:
-        // tev_filters.push({property:'TimeEntryItem.User.' + this.getSetting('vendorField'), value: 'VENDOR'});
-        
         var config = {
             model:'TimeEntryValue',
             filters: tev_filters,
@@ -2656,6 +2672,4 @@ td.ts-total-cell {
 
     </style>
 
-</head>
-<body></body>
-</html>
+<div id="tech_services_target"></div>
