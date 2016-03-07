@@ -2,13 +2,13 @@
 
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun Mar 06 2016 16:14:47 GMT-0800 (PST) -->
+    <!--  Build Date: Sun Mar 06 2016 17:08:09 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Mar 06 2016 16:14:47 GMT-0800 (PST)";
+        var APP_BUILD_DATE = "Sun Mar 06 2016 17:08:09 GMT-0800 (PST)";
     </script>
     
-    <script type="text/javascript" src="/apps/2.0/sdk-debug.js?apiKey=__PUT_API_KEY_HERE__"></script>
+    <script type="text/javascript" src="https://us1.rallydev.com/apps/2.0/sdk-debug.js?apiKey=__PUT_API_KEY_HERE__"></script>
 
 <!-- for confluence, don't render as a viewport, so we override the app creation step -->
 
@@ -1929,6 +1929,9 @@ Ext.define("TSTopLevelTimeReport", {
             var start_date = Rally.util.DateTime.toIsoString( this.down('#to_date_selector').getValue(),true).replace(/T.*$/,'T00:00:00.000Z');
             tev_filters.push({property:'TimeEntryItem.WeekStartDate', operator: '<=', value:start_date});
         }
+        
+        // UNCOMMENT AND MODIFY TO RESTRICT TO VENDOR:
+        // tev_filters.push({property:'TimeEntryItem.User.' + this.getSetting('vendorField'), value: 'VENDOR'});
         
         var config = {
             model:'TimeEntryValue',
