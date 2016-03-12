@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Fri Mar 11 2016 19:25:14 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Mar 11 2016 20:43:29 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Mar 11 2016 19:25:14 GMT-0800 (PST)";
-        var CHECKSUM = 128362939256;
+        var APP_BUILD_DATE = "Fri Mar 11 2016 20:43:29 GMT-0800 (PST)";
+        var CHECKSUM = 131582417816;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -2010,20 +2010,28 @@ Ext.define("TSTopLevelTimeReport", {
         }
         
         var level_2_name = me.PortfolioItemNames[1];
+        var level_2_short_name = level_2_name.replace(/.*\//, '');
         var level_3_name = me.PortfolioItemNames[2];
+        var level_3_short_name = level_3_name.replace(/.*\//, '');
         
         var oids = Ext.Array.map(rows, function(row){
             return row[level_2_name] && row[level_2_name].ObjectID;
         });
         
-        console.log('rows:', rows);
-        
+        var oids = Ext.Array.map(rows, function(row){
+            return row[level_3_name] && row[level_3_name].ObjectID;
+        });
+                
         // for stories with stories as parents, the feature doesn't
         // return its parent
         Ext.Array.each(rows, function(row) {
             if ( Ext.isEmpty(row[level_2_name]) && !Ext.isEmpty(row._ItemHierarchy)) {
                 oids = Ext.Array.merge(oids, row._ItemHierarchy);
             }
+            if ( Ext.isEmpty(row[level_3_name]) && !Ext.isEmpty(row._ItemHierarchy)) {
+                oids = Ext.Array.merge(oids, row._ItemHierarchy);
+            }
+            
         });
         
         me.setLoading('Loading Parent Tree...');
@@ -2031,9 +2039,7 @@ Ext.define("TSTopLevelTimeReport", {
         this._loadParentsFromOIDs(Ext.Array.unique(oids), true).then({
             scope: this,
             success: function(results) {
-                
-                console.log('_loadParentsFromOIDs', results);
-                
+                                
                 var results_by_oid = {};
                 Ext.Array.each(results, function(result) {
                     results_by_oid[result.get('ObjectID')] = result;
@@ -2041,11 +2047,14 @@ Ext.define("TSTopLevelTimeReport", {
                 
                 Ext.Array.each(rows, function(row){
                     var item = row[level_2_name];
-                    if ( item ) {
+                    
+                    if ( item ) {                        
                         var item_oid = item.ObjectID;
+                        row[level_2_name + "/idx"] = item_oid;
                         
                         if ( results_by_oid[item_oid] ) {
                             row[level_3_name] = results_by_oid[item_oid].get('Parent');
+                            row[level_3_name + "/idx"] = results_by_oid[item_oid].get('Parent').ObjectID;
                         }
                     }
                     
@@ -2057,10 +2066,12 @@ Ext.define("TSTopLevelTimeReport", {
                             
                             if ( Ext.util.Format.lowercase(level_2_name) ==  parent.get('_type')) {
                                 row[level_2_name] = parent.getData();
+                                row[level_2_name + "/idx"] = parent.getData().ObjectID;
                             }
                             
-                            if ( Ext.util.Format.lowercase(level_3_name) ==  parent.get('_type')) {                                
+                            if ( Ext.util.Format.lowercase(level_3_name) ==  parent.get('_type')) {
                                 row[level_3_name] = parent.getData();
+                                row[level_3_name + "/idx"] = parent.getData().ObjectID;
                             }
                         });
                     }
@@ -2204,27 +2215,35 @@ Ext.define("TSTopLevelTimeReport", {
                 '_ItemHierarchy': time_value.get('_ItemHierarchy') || []
             };
             
-            Ext.Array.each(me.PortfolioItemNames, function(name) { data[name] = null; });
-            
             var short_names = Ext.Array.map(me.PortfolioItemNames, function(piname){
                 return piname.replace(/.*\//,'');
+            });
+            
+            Ext.Array.each(me.PortfolioItemNames, function(piname) {
+                data[piname] = { ObjectID: -1};
+                data[piname + "/idx"] = -1; // for sorting
+            });
+            
+            Ext.Array.each(short_names, function(short_name) {
+                data[short_name] = "";
             });
             
             if ( Ext.isEmpty(user_story) ) {
                 //me.logger.log('no user story', time_value);
             } else {
                 
-                if ( short_names.length > 0 && !Ext.isEmpty(user_story[short_names[0]]) ) {
+                if ( me.PortfolioItemNames.length > 0 && !Ext.isEmpty(user_story[short_names[0]]) ) {
                     data[me.PortfolioItemNames[0]] = user_story[short_names[0]];
+                    data[me.PortfolioItemNames[0] + '/idx'] = user_story[short_names[0]].ObjectID;
                 }
                 
-                if ( short_names.length > 1 ) {
+                if ( me.PortfolioItemNames.length > 1 ) {
                     if ( data[me.PortfolioItemNames[0]] ) {
                         data[me.PortfolioItemNames[1]] = data[me.PortfolioItemNames[0]].Parent;
                     }
                 }
     
-                if ( short_names.length > 2 ) {
+                if ( me.PortfolioItemNames.length > 2 ) {
                     if ( data[me.PortfolioItemNames[1]] ) {
                         data[me.PortfolioItemNames[2]] = data[me.PortfolioItemNames[1]].Parent;
                     }
@@ -2237,13 +2256,13 @@ Ext.define("TSTopLevelTimeReport", {
     
     _addGrid: function(container, rows) {
         this.rows = rows;
-        
+                
         var store = Ext.create('Rally.data.custom.Store',{ 
             data: rows, 
             pageSize: 25,
             groupField: '__SecretKey'
         });
-                
+        
         this.grid = container.add({
             xtype:'rallygrid',
             store: store,
@@ -2312,16 +2331,18 @@ Ext.define("TSTopLevelTimeReport", {
         
         Ext.Array.each(Ext.Array.clone(me.PortfolioItemNames).reverse(), function(pi_name){
             var short_name = pi_name.replace(/.*\//, '');
+            var index = ( pi_name + '/idx' );
             
             columns.push({ 
-                dataIndex: pi_name, 
+                dataIndex: index, 
                 text: short_name, 
                 hidden: !me._getColumnShowSetting(short_name),
-                renderer: function(v) {
-                    if ( Ext.isEmpty(v) ) {
-                        return "";
-                    }
-                    return v.FormattedID + ": " + v._refObjectName;
+                renderer: function(v,m,r) {      
+                    var item = r.get(pi_name);
+                    if ( Ext.isEmpty(item) ) { return ""; }
+                    if ( Ext.isEmpty(item.FormattedID) ) { return ""; }
+                    
+                    return item.FormattedID + ": " + item._refObjectName;
                 }
             });
         });
@@ -2537,14 +2558,6 @@ Ext.define("TSTopLevelTimeReport", {
             }
         });
         return deferred.promise;
-    },
-    
-    _displayGrid: function(records){
-        this.down('#display_box').add({
-            xtype: 'rallygrid',
-            store: store,
-            columnCfgs: field_names
-        });
     },
     
     _getPortfolioItemTypes: function() {
