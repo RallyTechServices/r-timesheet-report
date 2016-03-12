@@ -256,6 +256,7 @@ Ext.define('Rally.technicalservices.FileUtilities', {
         var columns = grid.columns;
 
         Ext.Array.each(columns,function(column){
+            if ( column.hidden ) { return; }
             
             if ( column.dataIndex || column.renderer ) {
                 if ( column.csvText ) {
@@ -335,32 +336,37 @@ Ext.define('Rally.technicalservices.FileUtilities', {
         var columns = grid.columns;
         
         Ext.Array.each(columns, function (column) {
-            if (column.xtype != 'rallyrowactioncolumn'  && column.xtype != 'tsrowactioncolumn') {
-                if (column.dataIndex) {
-                    var column_name = column.dataIndex;
-                    
-                    var display_value = record.get(column_name);
+            if (column.xtype == 'rallyrowactioncolumn'  || column.xtype == 'tsrowactioncolumn') {
+                return;
+            }
+            
+            if ( column.hidden ) {
+                return;
+            }
+            
+            if (column.dataIndex) {
+                var column_name = column.dataIndex;
+                
+                var display_value = record.get(column_name);
 
-                    if (!column._csvIgnoreRender && ( column.renderer || column.exportRenderer) ) {
-                        if (column.exportRenderer) {
-                            display_value = column.exportRenderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
-                        } else {
-                            display_value = column.renderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
-                        }
-                    }
-                    node_values.push(display_value);
-                } else {
-                    var display_value = null;
-                    if (!column._csvIgnoreRender && column.renderer) {
-                        if (column.exportRenderer) {
-                            display_value = column.exportRenderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
-                        } else {
-                            display_value = column.renderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
-                        }
-                        node_values.push(display_value);
+                if (!column._csvIgnoreRender && ( column.renderer || column.exportRenderer) ) {
+                    if (column.exportRenderer) {
+                        display_value = column.exportRenderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
+                    } else {
+                        display_value = column.renderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
                     }
                 }
-
+                node_values.push(display_value);
+            } else {
+                var display_value = null;
+                if (!column._csvIgnoreRender && column.renderer) {
+                    if (column.exportRenderer) {
+                        display_value = column.exportRenderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
+                    } else {
+                        display_value = column.renderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
+                    }
+                    node_values.push(display_value);
+                }
             }
         }, this);
         

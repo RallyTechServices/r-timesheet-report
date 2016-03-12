@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Sun Mar 06 2016 17:08:09 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Mar 11 2016 18:00:14 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Sun Mar 06 2016 17:08:09 GMT-0800 (PST)";
-        var CHECKSUM = 124600415357;
+        var APP_BUILD_DATE = "Fri Mar 11 2016 18:00:14 GMT-0800 (PST)";
+        var CHECKSUM = 124895977244;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -637,6 +637,7 @@ Ext.define('Rally.technicalservices.FileUtilities', {
         var columns = grid.columns;
 
         Ext.Array.each(columns,function(column){
+            if ( column.hidden ) { return; }
             
             if ( column.dataIndex || column.renderer ) {
                 if ( column.csvText ) {
@@ -716,32 +717,37 @@ Ext.define('Rally.technicalservices.FileUtilities', {
         var columns = grid.columns;
         
         Ext.Array.each(columns, function (column) {
-            if (column.xtype != 'rallyrowactioncolumn'  && column.xtype != 'tsrowactioncolumn') {
-                if (column.dataIndex) {
-                    var column_name = column.dataIndex;
-                    
-                    var display_value = record.get(column_name);
+            if (column.xtype == 'rallyrowactioncolumn'  || column.xtype == 'tsrowactioncolumn') {
+                return;
+            }
+            
+            if ( column.hidden ) {
+                return;
+            }
+            
+            if (column.dataIndex) {
+                var column_name = column.dataIndex;
+                
+                var display_value = record.get(column_name);
 
-                    if (!column._csvIgnoreRender && ( column.renderer || column.exportRenderer) ) {
-                        if (column.exportRenderer) {
-                            display_value = column.exportRenderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
-                        } else {
-                            display_value = column.renderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
-                        }
-                    }
-                    node_values.push(display_value);
-                } else {
-                    var display_value = null;
-                    if (!column._csvIgnoreRender && column.renderer) {
-                        if (column.exportRenderer) {
-                            display_value = column.exportRenderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
-                        } else {
-                            display_value = column.renderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
-                        }
-                        node_values.push(display_value);
+                if (!column._csvIgnoreRender && ( column.renderer || column.exportRenderer) ) {
+                    if (column.exportRenderer) {
+                        display_value = column.exportRenderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
+                    } else {
+                        display_value = column.renderer(display_value, mock_meta_data, record, 0, 0, store, grid.getView());
                     }
                 }
-
+                node_values.push(display_value);
+            } else {
+                var display_value = null;
+                if (!column._csvIgnoreRender && column.renderer) {
+                    if (column.exportRenderer) {
+                        display_value = column.exportRenderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
+                    } else {
+                        display_value = column.renderer(display_value, mock_meta_data, record, record, 0, 0, store, grid.getView());
+                    }
+                    node_values.push(display_value);
+                }
             }
         }, this);
         
