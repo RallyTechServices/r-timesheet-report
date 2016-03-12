@@ -484,7 +484,7 @@ Ext.define("TSTopLevelTimeReport", {
                         var item_oid = item.ObjectID;
                         row[level_2_name + "/idx"] = item_oid;
                         
-                        if ( results_by_oid[item_oid] ) {
+                        if ( results_by_oid[item_oid] && results_by_oid[item_oid].get('Parent') ) {
                             row[level_3_name] = results_by_oid[item_oid].get('Parent');
                             row[level_3_name + "/idx"] = results_by_oid[item_oid].get('Parent').ObjectID;
                         }

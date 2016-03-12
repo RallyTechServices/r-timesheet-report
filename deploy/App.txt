@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Fri Mar 11 2016 20:57:12 GMT-0800 (PST) -->
+    <!--  Build Date: Fri Mar 11 2016 21:03:05 GMT-0800 (PST) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Fri Mar 11 2016 20:57:12 GMT-0800 (PST)";
-        var CHECKSUM = 132590359683;
+        var APP_BUILD_DATE = "Fri Mar 11 2016 21:03:05 GMT-0800 (PST)";
+        var CHECKSUM = 132788885956;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -2052,7 +2052,7 @@ Ext.define("TSTopLevelTimeReport", {
                         var item_oid = item.ObjectID;
                         row[level_2_name + "/idx"] = item_oid;
                         
-                        if ( results_by_oid[item_oid] ) {
+                        if ( results_by_oid[item_oid] && results_by_oid[item_oid].get('Parent') ) {
                             row[level_3_name] = results_by_oid[item_oid].get('Parent');
                             row[level_3_name + "/idx"] = results_by_oid[item_oid].get('Parent').ObjectID;
                         }
