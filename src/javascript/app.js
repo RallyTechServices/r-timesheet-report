@@ -446,12 +446,25 @@ Ext.define("TSTopLevelTimeReport", {
         
         var oids = Ext.Array.map(rows, function(row){
             return row[level_2_name] && row[level_2_name].ObjectID;
-        });        
+        });
+        
+        console.log('rows:', rows);
+        
+        // for stories with stories as parents, the feature doesn't
+        // return its parent
+        Ext.Array.each(rows, function(row) {
+            if ( Ext.isEmpty(row[level_2_name]) && !Ext.isEmpty(row._ItemHierarchy)) {
+                oids = Ext.Array.merge(oids, row._ItemHierarchy);
+            }
+        });
+        
         me.setLoading('Loading Parent Tree...');
 
         this._loadParentsFromOIDs(Ext.Array.unique(oids), true).then({
             scope: this,
             success: function(results) {
+                
+                console.log('_loadParentsFromOIDs', results);
                 
                 var results_by_oid = {};
                 Ext.Array.each(results, function(result) {
@@ -466,6 +479,22 @@ Ext.define("TSTopLevelTimeReport", {
                         if ( results_by_oid[item_oid] ) {
                             row[level_3_name] = results_by_oid[item_oid].get('Parent');
                         }
+                    }
+                    
+                    if ( !item && row._ItemHierarchy.length > 0 ) {
+                        Ext.Array.each(row._ItemHierarchy, function(item_oid){
+                            var parent = results_by_oid[item_oid];
+
+                            if ( Ext.isEmpty(parent) ) { return; }
+                            
+                            if ( Ext.util.Format.lowercase(level_2_name) ==  parent.get('_type')) {
+                                row[level_2_name] = parent.getData();
+                            }
+                            
+                            if ( Ext.util.Format.lowercase(level_3_name) ==  parent.get('_type')) {                                
+                                row[level_3_name] = parent.getData();
+                            }
+                        });
                     }
                 });
                 
@@ -492,8 +521,8 @@ Ext.define("TSTopLevelTimeReport", {
         }
         //_TypeHierarchy
         var filtered_time_values = Ext.Array.filter(time_values, function(time_value) { 
-            var type_hierarchy = time_value.get('_TypeHierarchy');
-            return Ext.Array.contains(type_hierarchy, parseInt(selected_pi.ObjectID));
+            var item_hierarchy = time_value.get('_ItemHierarchy');
+            return Ext.Array.contains(item_hierarchy, parseInt(selected_pi.ObjectID));
         });
         
         return filtered_time_values;
@@ -556,13 +585,13 @@ Ext.define("TSTopLevelTimeReport", {
         });
         
         var parents_by_oid = {};
-        var type_hierarchy_by_oid = {};
+        var item_hierarchy_by_oid = {};
         
         Ext.Array.each(lookback_records, function(record) {
             var oid_list = record.get('_ItemHierarchy');
             var oid = oid_list[oid_list.length-1];
             
-            type_hierarchy_by_oid[oid] = oid_list;
+            item_hierarchy_by_oid[oid] = oid_list;
             
             // find topmost parent in scope
             Ext.Array.each( oid_list, function(parent_oid) {
@@ -571,17 +600,17 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             },this,true);
         },this);
-                
+        
         Ext.Array.each(time_values, function(time_value){
             var tei = time_value.get('TimeEntryItem');
             var wp = tei.WorkProduct;
             if ( !Ext.isEmpty(wp) ) {
                 var oid = wp.ObjectID;
                 time_value.set('_TopLevelParent', parents_by_oid[oid]);
-                time_value.set('_TypeHierarchy', type_hierarchy_by_oid[oid] || []);
+                time_value.set('_ItemHierarchy', item_hierarchy_by_oid[oid] || []);
             } else {
                 time_value.set('_TopLevelParent', "");
-                time_value.set('_TypeHierarchy', []);
+                time_value.set('_ItemHierarchy', []);
             }
         });
         
@@ -603,7 +632,8 @@ Ext.define("TSTopLevelTimeReport", {
                 '_TopLevelParent': time_value.get('_TopLevelParent'),
                 '_CostCenter': user['CostCenter'],
                 '_Vendor': user[me.getSetting('vendorField')],
-                '_WorkProduct': user_story
+                '_WorkProduct': user_story,
+                '_ItemHierarchy': time_value.get('_ItemHierarchy') || []
             };
             
             Ext.Array.each(me.PortfolioItemNames, function(name) { data[name] = null; });
@@ -615,6 +645,7 @@ Ext.define("TSTopLevelTimeReport", {
             if ( Ext.isEmpty(user_story) ) {
                 //me.logger.log('no user story', time_value);
             } else {
+                
                 if ( short_names.length > 0 && !Ext.isEmpty(user_story[short_names[0]]) ) {
                     data[me.PortfolioItemNames[0]] = user_story[short_names[0]];
                 }
