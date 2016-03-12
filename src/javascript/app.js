@@ -30,7 +30,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     stateful: true,
     stateEvents: ['updateData','columnsChosen','columnmoved','columnresize'],
-    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIData',
+    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.b',
 
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
@@ -688,7 +688,16 @@ Ext.define("TSTopLevelTimeReport", {
     
     _addGrid: function(container, rows) {
         this.rows = rows;
-                
+        
+        var total_hours = 0;
+        
+        Ext.Array.each(rows, function(row) {
+            var hours = row.Hours|| 0;
+            total_hours = total_hours + hours;
+        });
+        
+        this.total_hours = total_hours;
+        
         var store = Ext.create('Rally.data.custom.Store',{ 
             data: rows, 
             pageSize: 25,
@@ -849,6 +858,10 @@ Ext.define("TSTopLevelTimeReport", {
                 dataIndex: 'Hours', 
                 text: 'Hours',
                 summaryType: 'sum',
+                summaryRenderer: function(v,m,r) {
+                    
+                    return me.total_hours;
+                },
                 hidden: false
             }
         ]);
