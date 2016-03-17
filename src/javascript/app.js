@@ -188,8 +188,13 @@ Ext.define("TSTopLevelTimeReport", {
                     this.logger.log('columns:', columns);
                     this.columns = columns;
                     if ( this.down('rallygrid') ) {
-                        this.down('rallygrid').reconfigure(undefined, this.columns);
-                        this.down('rallygrid').getStore().reload();
+                        
+                        var store = this._getStore();
+                        this.down('rallygrid').reconfigure(store, this.columns);
+                        
+                        //this.down('rallygrid').reconfigure(undefined, this.columns);
+                        //this.down('rallygrid').getStore().reload();
+                        
                     }
                     
                     this.fireEvent('columnsChosen', columns);
@@ -319,7 +324,8 @@ Ext.define("TSTopLevelTimeReport", {
                 this._addUpperLevelItems(rows).then({
                     scope: this,
                     success: function(results) {
-                        this._addGrid(this.down('#display_box'), results);
+                        this.rows = results;
+                        this._addGrid(this.down('#display_box'));
                     },
                     failure: function(msg){
                         Ext.Msg.alert('Problem adding associated data',msg);
@@ -686,23 +692,78 @@ Ext.define("TSTopLevelTimeReport", {
         });
     },
     
-    _addGrid: function(container, rows) {
-        this.rows = rows;
-        
+    _getStore: function() {
+        var rows = this.rows;
         var total_hours = 0;
         
-        Ext.Array.each(rows, function(row) {
+        this.display_rows = this._consolidateRows(rows);
+        
+        Ext.Array.each(this.display_rows, function(row) {
             var hours = row.Hours|| 0;
             total_hours = total_hours + hours;
         });
-        
+                
         this.total_hours = total_hours;
-        
-        var store = Ext.create('Rally.data.custom.Store',{ 
-            data: rows, 
+
+        return Ext.create('Rally.data.custom.Store',{ 
+            data: this.display_rows, 
             pageSize: 25,
             groupField: '__SecretKey'
         });
+    },
+    
+    _getKey: function(display_fields, row) {
+        var key_array = Ext.Array.map(display_fields, function(field) {
+            if ( field == "Hours" ) {
+                return "x";
+            }
+            var value = row[field];
+            if ( Ext.isEmpty(value) ) {
+                return "";
+            }
+            
+            if ( Ext.isObject(value) && value.ObjectID ) {
+                return value.ObjectID;
+            }
+            
+            if ( Ext.isFunction(value.get) && value.get('ObjectID')) {
+                return value.get('ObjectID');
+            }
+            return value;
+        
+        });
+        return key_array.join(':');
+    },
+    
+    _consolidateRows: function(rows) {
+        var display_row_hash = {};
+        var display_fields = Ext.Array.map( 
+            Ext.Array.filter(this._getColumns(), function(column) {
+                return ( !column.hidden );
+            }),
+            function(column) {
+                return column.dataIndex;
+            }
+        );
+        
+        Ext.Array.each(rows, function(row) {
+            var key = this._getKey(display_fields, row);
+            if ( Ext.isEmpty(display_row_hash[key] ) ) {
+                display_row_hash[key] =  Ext.clone(row);
+                return;
+            }
+            var total_hours = display_row_hash[key].Hours || 0;
+            var hours = row.Hours || 0;
+            
+            display_row_hash[key].Hours = total_hours + hours;
+        },this);
+        
+        return Ext.Object.getValues(display_row_hash);
+    },
+    
+    _addGrid: function(container) {        
+        
+        var store = this._getStore();
         
         this.grid = container.add({
             xtype:'rallygrid',
@@ -904,7 +965,7 @@ Ext.define("TSTopLevelTimeReport", {
         this.logger.log('_export');
         
         var grid = this.down('rallygrid');
-        var rows = this.rows;
+        var rows = this.display_rows;
         
         this.logger.log('number of rows:', rows.length);
         
