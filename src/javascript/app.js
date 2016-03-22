@@ -31,7 +31,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     stateful: true,
     stateEvents: ['updateData','columnsChosen','columnmoved','columnresize'],
-    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.b',
+    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.c',
 
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
@@ -555,22 +555,23 @@ Ext.define("TSTopLevelTimeReport", {
     _filterForPI: function(time_values) {
         this.setLoading("Applying PI Filter...");
 
-        
         if ( Ext.isEmpty(this._selectedPIData) || this._selectedPIData.length === 0 ) { 
             return time_values;
         }
         //_TypeHierarchy
         var filtered_time_values = [];
         
+        this.logger.log("Filtering on ", this._selectedPIData);
+        
         Ext.Array.each(this._selectedPIData, function(selected_pi){
-            
             var values = Ext.Array.filter(time_values, function(time_value) { 
                 var item_hierarchy = time_value.get('_ItemHierarchy');
+
                 return Ext.Array.contains(item_hierarchy, parseInt(selected_pi.ObjectID));
-            });
+            },this);
             
             filtered_time_values = Ext.Array.merge(filtered_time_values, values);
-        });
+        },this);
         return filtered_time_values;
     },
     
@@ -729,10 +730,10 @@ Ext.define("TSTopLevelTimeReport", {
         
         Ext.Array.each(this.display_rows, function(row) {
             var hours = row.Hours|| 0;
-            total_hours = total_hours + hours;
+            total_hours = total_hours + ( 1000 * hours ); // shift decimal to the left so that decimal math can work
         });
                 
-        this.total_hours = total_hours;
+        this.total_hours = total_hours / 1000;
 
         return Ext.create('Rally.data.custom.Store',{ 
             data: this.display_rows, 
@@ -779,13 +780,24 @@ Ext.define("TSTopLevelTimeReport", {
             var key = this._getKey(display_fields, row);
             if ( Ext.isEmpty(display_row_hash[key] ) ) {
                 display_row_hash[key] =  Ext.clone(row);
+                if ( display_row_hash[key].Hours > 0 ) {
+                    var shifted = display_row_hash[key].Hours * 1000;
+                    display_row_hash[key].Hours = shifted;
+                }
                 return;
             }
             var total_hours = display_row_hash[key].Hours || 0;
-            var hours = row.Hours || 0;
+            var hours = row.Hours || 0;              
+            var shifted_hours = 1000 * hours;// shift decimal to the left so that decimal math can work
+            total_hours = total_hours + shifted_hours;
+            this.logger.log(key,hours,shifted_hours, total_hours);
             
-            display_row_hash[key].Hours = total_hours + hours;
+            display_row_hash[key].Hours = total_hours;
         },this);
+        
+        Ext.Object.each(display_row_hash, function(key,value){
+            value.Hours = value.Hours / 1000;
+        });
         
         return Ext.Object.getValues(display_row_hash);
     },
@@ -947,9 +959,8 @@ Ext.define("TSTopLevelTimeReport", {
             { 
                 dataIndex: 'Hours', 
                 text: 'Hours',
-                summaryType: 'sum',
-                summaryRenderer: function(v,m,r) {
-                    
+                summaryRenderer: function() {
+                    me.logger.log("total:", me.total_hours);
                     return me.total_hours;
                 },
                 hidden: false
