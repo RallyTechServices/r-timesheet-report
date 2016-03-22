@@ -737,7 +737,7 @@ Ext.define("TSTopLevelTimeReport", {
 
         return Ext.create('Rally.data.custom.Store',{ 
             data: this.display_rows, 
-            pageSize: 25,
+            pageSize: 200,
             groupField: '__SecretKey'
         });
     },
@@ -815,6 +815,7 @@ Ext.define("TSTopLevelTimeReport", {
             enableBulkEdit: false,
             enableColumnHide: false,
             showPagingToolbar: true,
+            pagingToolbarCfg: { pageSizes: [200] },
             sortableColumns: true,
             enableColumnMove: true,
             features: [{

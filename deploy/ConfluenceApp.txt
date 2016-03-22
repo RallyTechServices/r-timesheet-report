@@ -2,10 +2,10 @@
 
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Mar 22 2016 16:35:59 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Mar 22 2016 16:40:36 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Mar 22 2016 16:35:59 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Tue Mar 22 2016 16:40:36 GMT-0700 (PDT)";
     </script>
     
     <script type="text/javascript" src="https://us1.rallydev.com/apps/2.0/sdk-debug.js?apiKey=__PUT_API_KEY_HERE__"></script>
@@ -2334,7 +2334,7 @@ Ext.define("TSTopLevelTimeReport", {
 
         return Ext.create('Rally.data.custom.Store',{ 
             data: this.display_rows, 
-            pageSize: 25,
+            pageSize: 200,
             groupField: '__SecretKey'
         });
     },
@@ -2412,6 +2412,7 @@ Ext.define("TSTopLevelTimeReport", {
             enableBulkEdit: false,
             enableColumnHide: false,
             showPagingToolbar: true,
+            pagingToolbarCfg: { pageSizes: [200] },
             sortableColumns: true,
             enableColumnMove: true,
             features: [{
