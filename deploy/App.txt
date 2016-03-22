@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Tue Mar 22 2016 16:40:35 GMT-0700 (PDT) -->
+    <!--  Build Date: Tue Mar 22 2016 16:44:23 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Tue Mar 22 2016 16:40:35 GMT-0700 (PDT)";
-        var CHECKSUM = 146375571566;
+        var APP_BUILD_DATE = "Tue Mar 22 2016 16:44:23 GMT-0700 (PDT)";
+        var CHECKSUM = 146304104703;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -1609,7 +1609,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     stateful: true,
     stateEvents: ['updateData','columnsChosen','columnmoved','columnresize'],
-    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.c',
+    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.d',
 
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
@@ -1832,7 +1832,7 @@ Ext.define("TSTopLevelTimeReport", {
                     attributeName: 'Name'
                 },
                 {
-                    displayName:'Project',
+                    displayName:'Team',
                     attributeName: 'Project.Name'
                 },
                 {
@@ -1846,7 +1846,7 @@ Ext.define("TSTopLevelTimeReport", {
                     dataIndex: 'FormattedID'
                 },
                 'Name',
-                'Project',
+                'Team',
                 'Owner',
                 'State'
             ],
@@ -2494,8 +2494,8 @@ Ext.define("TSTopLevelTimeReport", {
             },
             { 
                 dataIndex: '_WorkProduct', 
-                text: 'Project', 
-                hidden: !me._getColumnShowSetting('Project'),
+                text: 'Team', 
+                hidden: !me._getColumnShowSetting('Team'),
                 renderer: function(v) {
                     if ( Ext.isEmpty(v) ) {
                         return "";

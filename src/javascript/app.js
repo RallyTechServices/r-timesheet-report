@@ -31,7 +31,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     stateful: true,
     stateEvents: ['updateData','columnsChosen','columnmoved','columnresize'],
-    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.c',
+    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.d',
 
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
@@ -254,7 +254,7 @@ Ext.define("TSTopLevelTimeReport", {
                     attributeName: 'Name'
                 },
                 {
-                    displayName:'Project',
+                    displayName:'Team',
                     attributeName: 'Project.Name'
                 },
                 {
@@ -268,7 +268,7 @@ Ext.define("TSTopLevelTimeReport", {
                     dataIndex: 'FormattedID'
                 },
                 'Name',
-                'Project',
+                'Team',
                 'Owner',
                 'State'
             ],
@@ -916,8 +916,8 @@ Ext.define("TSTopLevelTimeReport", {
             },
             { 
                 dataIndex: '_WorkProduct', 
-                text: 'Project', 
-                hidden: !me._getColumnShowSetting('Project'),
+                text: 'Team', 
+                hidden: !me._getColumnShowSetting('Team'),
                 renderer: function(v) {
                     if ( Ext.isEmpty(v) ) {
                         return "";
