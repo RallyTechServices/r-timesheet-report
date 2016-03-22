@@ -81,7 +81,8 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
          * @cfg {String}
          * The ref of a record to select when the chooser loads
          */
-        selectedRef: undefined
+        selectedRef: undefined,
+        selectedRefs: undefined
 
         /**
          * @private
@@ -341,6 +342,15 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
                 var record = this.grid.getStore().getAt(recordIndex);
                 this.grid.getSelectionModel().select(record);
             }
+        }        
+        if ( this.selectedRefs) {
+            Ext.Array.each(this.selectedRefs, function(ref) {
+                var recordIndex = this.grid.getStore().find('_ref', ref);
+                if(recordIndex !== -1){
+                    var record = this.grid.getStore().getAt(recordIndex);
+                    this.grid.getSelectionModel().select(record,true);
+                }
+            },this);
         }
     },
 

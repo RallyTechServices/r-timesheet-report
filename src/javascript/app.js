@@ -15,6 +15,7 @@ Ext.define("TSTopLevelTimeReport", {
     // CHANGE HERE FOR EXTERNAL EXECUTION
     config: {
         _selectedPIData: null,
+        _selectedPIValues: null,
         defaultSettings: {
             vendorField: 'MiddleName',
             columns: Ext.JSON.encode({
@@ -42,14 +43,17 @@ Ext.define("TSTopLevelTimeReport", {
 
         state = {
             _selectedPIData: this._selectedPIData,
+            _selectedPIValues: this._selectedPIValues,
             columns: this.columns
         };
 
+        this.logger.log('getting state', state);
         return state;
     },
     
     applyState: function(state) {
         if (state) {
+            this.logger.log('applying state', state);
             Ext.apply(this, state);
         }
     },
@@ -152,7 +156,7 @@ Ext.define("TSTopLevelTimeReport", {
         
         pi_container.add({
             xtype: 'rallybutton',
-            text: 'Choose Portfolio Item',
+            text: 'Choose Portfolio Item(s)',
             margin: '0px 5px 0px 5px',
             listeners: {
                 scope: this,
@@ -167,7 +171,7 @@ Ext.define("TSTopLevelTimeReport", {
                 xtype:'container',
                 itemId: 'pi_message',
                 margin: 7,
-                tpl: '<tpl>{FormattedID}: {Name}</tpl>'
+                tpl: '<tpl>{msg}</tpl>'
             },
             { 
                 xtype:'container',
@@ -191,9 +195,6 @@ Ext.define("TSTopLevelTimeReport", {
                         
                         var store = this._getStore();
                         this.down('rallygrid').reconfigure(store, this.columns);
-                        
-                        //this.down('rallygrid').reconfigure(undefined, this.columns);
-                        //this.down('rallygrid').getStore().reload();
                         
                     }
                     
@@ -234,13 +235,15 @@ Ext.define("TSTopLevelTimeReport", {
     
     _launchPIPicker: function() {
         var me = this;
-        this._selectedPIData = null;
+        //this._selectedPIData = null;
+        this.logger.log('Values:', this._selectedPIValues);
         
         Ext.create('Rally.technicalservices.ChooserDialog', {
             artifactTypes: this.PortfolioItemNames,
             autoShow: true,
-            multiple: false,
+            multiple: true,
             title: 'Choose PortfolioItem',
+            selectedRefs: this._selectedPIValues,
             filterableFields: [
                 {
                     displayName: 'Formatted ID',
@@ -271,8 +274,14 @@ Ext.define("TSTopLevelTimeReport", {
             ],
             fetchFields: ['ObjectID','FormattedID','Name'],
             listeners: {
-                artifactchosen: function(dialog, selectedRecord){
-                    this._selectedPIData = selectedRecord.getData();
+                artifactchosen: function(dialog, selectedRecords){
+                    this._selectedPIData = Ext.Array.map( selectedRecords, function(selectedRecord) {
+                        return selectedRecord.getData();
+                    });
+                    
+                    this._selectedPIValues = Ext.Array.map(selectedRecords, function(selectedRecord){
+                        return selectedRecord.get('_ref');
+                    });
                     this._displaySelectedPIMessage();
                 },
                 scope: this
@@ -282,11 +291,26 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _displaySelectedPIMessage: function() {
-        this.down('#pi_message').update(this._selectedPIData);
+        var msg = "";
+        
+        if ( !Ext.isEmpty(this._selectedPIData) ) {
+            if ( this._selectedPIData.length > 0 ) {
+               msg = this._selectedPIData[0].FormattedID + ": " + this._selectedPIData[0].Name;
+            }
+            if ( this._selectedPIData.length == 2 ) {
+                msg = msg + " ... and 1 other";
+            }
+            if ( this._selectedPIData.length > 2 ) {
+                var extra_count = this._selectedPIData.length - 1;
+                msg = msg + " ... and " + extra_count + " others";
+            }
+        }
+        
+        this.down('#pi_message').update({ msg: msg });
         var remove_button_container = this.down('#pi_remove_button_container');
         remove_button_container.removeAll();
         
-        if ( !Ext.isEmpty(this._selectedPIData) ) {
+        if ( !Ext.isEmpty(this._selectedPIData) && this._selectedPIData.length > 0 ) {
             remove_button_container.add({
                 xtype:'rallybutton',
                 itemId:'pi_remove_button',
@@ -294,7 +318,7 @@ Ext.define("TSTopLevelTimeReport", {
                 text: '<span class="icon-close"> </span>',
                 listeners: {
                     scope: this,
-                    clicK: this._clearSelectedPI
+                    click: this._clearSelectedPI
                 }
             });
         }
@@ -529,19 +553,24 @@ Ext.define("TSTopLevelTimeReport", {
     },
     
     _filterForPI: function(time_values) {
-        var selected_pi = this._selectedPIData;
-        this.setLoading("Applying filters...");
+        this.setLoading("Applying PI Filter...");
 
         
-        if ( Ext.isEmpty(selected_pi) ) { 
+        if ( Ext.isEmpty(this._selectedPIData) || this._selectedPIData.length === 0 ) { 
             return time_values;
         }
         //_TypeHierarchy
-        var filtered_time_values = Ext.Array.filter(time_values, function(time_value) { 
-            var item_hierarchy = time_value.get('_ItemHierarchy');
-            return Ext.Array.contains(item_hierarchy, parseInt(selected_pi.ObjectID));
-        });
+        var filtered_time_values = [];
         
+        Ext.Array.each(this._selectedPIData, function(selected_pi){
+            
+            var values = Ext.Array.filter(time_values, function(time_value) { 
+                var item_hierarchy = time_value.get('_ItemHierarchy');
+                return Ext.Array.contains(item_hierarchy, parseInt(selected_pi.ObjectID));
+            });
+            
+            filtered_time_values = Ext.Array.merge(filtered_time_values, values);
+        });
         return filtered_time_values;
     },
     

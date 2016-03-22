@@ -94,6 +94,10 @@ module.exports = function(grunt) {
                     variables: config
                 }
         },
+        watch: {
+            files: ['src/javascript/**/*.js', 'src/style/*.css'],
+            tasks: ['deploy']
+        },
         jasmine: {
             fast: {
                 src: 'src/**/*.js',
@@ -348,6 +352,8 @@ module.exports = function(grunt) {
     grunt.loadNpmTasks('grunt-templater');
     grunt.loadNpmTasks('grunt-contrib-jasmine');
     grunt.loadNpmTasks('grunt-contrib-uglify');
+    grunt.loadNpmTasks('grunt-contrib-watch');
+    
     //tasks
     grunt.registerTask('default', ['debug','build','ugly','apikey', 'confluence']);
     
@@ -366,4 +372,5 @@ module.exports = function(grunt) {
     grunt.registerTask('test-slow', "Run tests that need to connect to Rally", ['jasmine:slow']);
 
     grunt.registerTask('deploy', 'Build and deploy app to the location in auth.json',['build','ugly','apikey','confluence','install']);
+
 };
