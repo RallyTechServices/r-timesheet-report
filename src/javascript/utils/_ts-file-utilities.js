@@ -12,33 +12,35 @@ Ext.define('recordHolder',{
 Ext.define('Rally.technicalservices.FileUtilities', {
     singleton: true,
     logger: new Rally.technicalservices.Logger(),
+    
     saveCSVToFile:function(csv,file_name,type_object){
-        console.log('saveCSVToFile ', csv);
-        if (type_object == undefined){
+        if (type_object === undefined){
             type_object = {type:'text/csv;charset=utf-8'};
         }
-        var blob = new Blob([csv],type_object);
-        this.saveAs(csv, file_name, type_object);
+        this.saveAs(csv,file_name, type_object);
     },
-    saveAs: function(textToWrite, fileName, type_object)
+    
+    saveAs: function(textToWrite, fileName)
     {
+        this.logger.log('saveAs:', fileName);
+        
         if (Ext.isIE9m){
             Rally.ui.notify.Notifier.showWarning({message: "Export is not supported for IE9 and below."});
             return;
         }
-        
-        console.log('saveAs', fileName);
 
         var textFileAsBlob = null;
         try {
             textFileAsBlob = new Blob([textToWrite], {type:'text/plain'});
         }
         catch(e){
+            this.logger.log('Caught an error ', e);
+            
             window.BlobBuilder = window.BlobBuilder ||
                         window.WebKitBlobBuilder ||
                     window.MozBlobBuilder ||
                     window.MSBlobBuilder;
-            if (window.BlobBuilder && e.name == 'TypeError'){
+            if (window.BlobBuilder ) { //&&  e.name === 'TypeError'){
                 bb = new BlobBuilder();
                 bb.append([textToWrite]);
                 textFileAsBlob = bb.getBlob("text/plain");
@@ -47,7 +49,6 @@ Ext.define('Rally.technicalservices.FileUtilities', {
         }
 
         if (!textFileAsBlob){
-            console.log('Problem creating blob');
             Rally.ui.notify.Notifier.showWarning({message: "Export is not supported for this browser."});
             return;
         }
@@ -86,7 +87,6 @@ Ext.define('Rally.technicalservices.FileUtilities', {
 
     },
     createObjectURL: function ( file ) {
-        console.log('createObjectURL');
         if ( window.webkitURL ) {
             return window.webkitURL.createObjectURL( file );
         } else if ( window.URL && window.URL.createObjectURL ) {
