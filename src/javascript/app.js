@@ -402,7 +402,6 @@ Ext.define("TSTopLevelTimeReport", {
         }
         
         return TSUtilities.loadWsapiRecordsWithParallelPages(config);
-        
     },
     
     _loadHierarchyTree: function(time_values) {
@@ -442,9 +441,12 @@ Ext.define("TSTopLevelTimeReport", {
                     })
                 );
                 
+                this.setLoading('Loading direct parents...');
+                
                 this._loadParentsFromOIDs(Ext.Array.unique(parent_oids)).then({
                     scope: this,
                     success: function(parents) {
+                        this.setLoading('Associating parent information...');
                         var time = this._addParentsToTime(time_values, lookback_records, parents);
                         deferred.resolve(time);
                     },
@@ -579,13 +581,15 @@ Ext.define("TSTopLevelTimeReport", {
         var me = this;
         var deferred = Ext.create('Deft.Deferred');
 
+        this.logger.log('_loadParentsFromOIDs', parent_oids.length);
+        
         var filters = Ext.Array.map(parent_oids, function(oid){
             return { property:'ObjectID', value:oid }
         });
         
         var models = Ext.Array.merge(['HierarchicalRequirement'], this.PortfolioItemNames);
         
-        var chunk_size = 25;
+        var chunk_size = 100;
         var array_of_chunked_filters = [];
         
         while (filters.length > 0 ) {
@@ -593,11 +597,13 @@ Ext.define("TSTopLevelTimeReport", {
         }
         
         var promises = [];
-        Ext.Array.each(array_of_chunked_filters, function(filters){
+        var page_count = array_of_chunked_filters.length;
+        Ext.Array.each(array_of_chunked_filters, function(filters, page_index){
             var config = { 
                 models:models, 
                 filters: Rally.data.wsapi.Filter.or(filters), 
-                fetch: ['FormattedID','Name','Parent','ObjectID']
+                fetch: ['FormattedID','Name','Parent','ObjectID'],
+                enablePostGet: true
             };
             
             if (!Ext.isEmpty(me.projectContext)) {
@@ -610,10 +616,17 @@ Ext.define("TSTopLevelTimeReport", {
             if ( search_everywhere ) {
                 config.context = { project: null };
             }
-            promises.push(function() { return this._loadWsapiArtifacts(config); });
+            promises.push(function() {
+                var percentage = parseInt( page_index * 100 / page_count, 10);
+                this.setLoading("Loading parent information (" + percentage + "%)");
+                return this._loadWsapiArtifacts(config); 
+            });
         });
-        Deft.Chain.sequence(promises,this).then({
+        //
+        CA.techservices.promise.ParallelThrottle.throttle(promises, 6, this).then({
+        //Deft.Chain.sequence(promises,this).then({
             success: function(results) {
+                
                 deferred.resolve(Ext.Array.flatten(results));
             },
             failure: function(msg) {
@@ -790,7 +803,6 @@ Ext.define("TSTopLevelTimeReport", {
             var hours = row.Hours || 0;              
             var shifted_hours = 1000 * hours;// shift decimal to the left so that decimal math can work
             total_hours = total_hours + shifted_hours;
-            this.logger.log(key,hours,shifted_hours, total_hours);
             
             display_row_hash[key].Hours = total_hours;
         },this);
