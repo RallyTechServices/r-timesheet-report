@@ -1048,7 +1048,7 @@ Ext.define("TSTopLevelTimeReport", {
                 if ( cfg && cfg.renderer ) {
                     column.renderer = cfg.renderer;
                 }
-                
+                                
                 if ( cfg && !column.hidden && Ext.isEmpty(column.summaryType) ) {
                     if ( !assigned_total_string_column ) {
                         assigned_total_string_column = true;
@@ -1056,6 +1056,10 @@ Ext.define("TSTopLevelTimeReport", {
                             return "TOTAL";
                         }
                     }
+                }
+                
+                if ( cfg && cfg.summaryRenderer && cfg.dataIndex == "Hours" ) {
+                    column.summaryRenderer = cfg.summaryRenderer;
                 }
             });
             return this.columns;

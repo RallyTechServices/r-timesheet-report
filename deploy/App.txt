@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Mar 24 2016 20:10:03 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu Mar 24 2016 20:16:23 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Mar 24 2016 20:10:03 GMT-0700 (PDT)";
-        var CHECKSUM = 153426479255;
+        var APP_BUILD_DATE = "Thu Mar 24 2016 20:16:23 GMT-0700 (PDT)";
+        var CHECKSUM = 153952846157;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -2626,7 +2626,7 @@ Ext.define("TSTopLevelTimeReport", {
                 if ( cfg && cfg.renderer ) {
                     column.renderer = cfg.renderer;
                 }
-                
+                                
                 if ( cfg && !column.hidden && Ext.isEmpty(column.summaryType) ) {
                     if ( !assigned_total_string_column ) {
                         assigned_total_string_column = true;
@@ -2634,6 +2634,10 @@ Ext.define("TSTopLevelTimeReport", {
                             return "TOTAL";
                         }
                     }
+                }
+                
+                if ( cfg && cfg.summaryRenderer && cfg.dataIndex == "Hours" ) {
+                    column.summaryRenderer = cfg.summaryRenderer;
                 }
             });
             return this.columns;
