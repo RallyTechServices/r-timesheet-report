@@ -6,23 +6,18 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
     extend: 'Rally.ui.dialog.Dialog',
     alias:'widget.tschooserdialog',
 
-    clientMetrics: [{
-        beginEvent:'beforeshow',
-        endEvent:'show',
-        description:'dialog shown'
-    }],
-
     width: 800,
+    height: 450,
     closable: true,
 
-    searchContext: 'project',
+    searchContext: 'workspace',
     
     config: {
         /**
          * @cfg {String}
          * Title to give to the dialog
          */
-        title: 'Choose an Artifact',
+        title: 'Choose an Item',
         /**
          * @cfg {Array} (required)
          * List of artifact types to allow the user to choose from
@@ -99,7 +94,7 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
                 xtype: 'container',
                 itemId: 'gridContainer',
                 layout: 'fit',
-                height: 400
+                height: 350
             }
         ]
     },
@@ -288,7 +283,12 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
         });
 
         var store_config = this.storeConfig;
-        store_config.context = { project: Rally.getApp().getContext().getProjectRef()};
+        
+        store_config.context = { project: Rally.getApp().getContext().getProjectRef() };
+        
+        if ( this.searchContext == "workspace" ) {
+            store_config.context = { project: null };
+        }
         
         var new_fetch = Ext.Array.merge(['ObjectID'],this.fetchFields);
         var current_fetch = store_config.fetch || [];
@@ -378,7 +378,7 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
         if ( this.searchContext == "workspace" ) {
             store_config.context = { project: null };
         }
-        
+
         var store = this.grid.getStore();        
         store.context = store_config.context;
         

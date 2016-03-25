@@ -236,13 +236,13 @@ Ext.define("TSTopLevelTimeReport", {
     _launchPIPicker: function() {
         var me = this;
         //this._selectedPIData = null;
-        this.logger.log('Values:', this._selectedPIValues);
+        this.logger.log('_launchPIPicker:', this._selectedPIValues);
         
         Ext.create('Rally.technicalservices.ChooserDialog', {
             artifactTypes: this.PortfolioItemNames,
             autoShow: true,
             multiple: true,
-            title: 'Choose PortfolioItem',
+            title: 'Choose a PortfolioItem',
             selectedRefs: this._selectedPIValues,
             filterableFields: [
                 {

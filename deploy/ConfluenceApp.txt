@@ -2,10 +2,10 @@
 
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Mar 24 2016 20:16:24 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu Mar 24 2016 20:34:07 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Mar 24 2016 20:16:24 GMT-0700 (PDT)";
+        var APP_BUILD_DATE = "Thu Mar 24 2016 20:34:07 GMT-0700 (PDT)";
     </script>
     
     <script type="text/javascript" src="https://us1.rallydev.com/apps/2.0/sdk-debug.js?apiKey=__PUT_API_KEY_HERE__"></script>
@@ -795,23 +795,18 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
     extend: 'Rally.ui.dialog.Dialog',
     alias:'widget.tschooserdialog',
 
-    clientMetrics: [{
-        beginEvent:'beforeshow',
-        endEvent:'show',
-        description:'dialog shown'
-    }],
-
     width: 800,
+    height: 450,
     closable: true,
 
-    searchContext: 'project',
+    searchContext: 'workspace',
     
     config: {
         /**
          * @cfg {String}
          * Title to give to the dialog
          */
-        title: 'Choose an Artifact',
+        title: 'Choose an Item',
         /**
          * @cfg {Array} (required)
          * List of artifact types to allow the user to choose from
@@ -888,7 +883,7 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
                 xtype: 'container',
                 itemId: 'gridContainer',
                 layout: 'fit',
-                height: 400
+                height: 350
             }
         ]
     },
@@ -1077,7 +1072,12 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
         });
 
         var store_config = this.storeConfig;
-        store_config.context = { project: Rally.getApp().getContext().getProjectRef()};
+        
+        store_config.context = { project: Rally.getApp().getContext().getProjectRef() };
+        
+        if ( this.searchContext == "workspace" ) {
+            store_config.context = { project: null };
+        }
         
         var new_fetch = Ext.Array.merge(['ObjectID'],this.fetchFields);
         var current_fetch = store_config.fetch || [];
@@ -1167,7 +1167,7 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
         if ( this.searchContext == "workspace" ) {
             store_config.context = { project: null };
         }
-        
+
         var store = this.grid.getStore();        
         store.context = store_config.context;
         
@@ -1833,13 +1833,13 @@ Ext.define("TSTopLevelTimeReport", {
     _launchPIPicker: function() {
         var me = this;
         //this._selectedPIData = null;
-        this.logger.log('Values:', this._selectedPIValues);
+        this.logger.log('_launchPIPicker:', this._selectedPIValues);
         
         Ext.create('Rally.technicalservices.ChooserDialog', {
             artifactTypes: this.PortfolioItemNames,
             autoShow: true,
             multiple: true,
-            title: 'Choose PortfolioItem',
+            title: 'Choose a PortfolioItem',
             selectedRefs: this._selectedPIValues,
             filterableFields: [
                 {
