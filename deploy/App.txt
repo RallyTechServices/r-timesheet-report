@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Mar 24 2016 18:17:55 GMT-0700 (PDT) -->
+    <!--  Build Date: Thu Mar 24 2016 20:10:03 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Mar 24 2016 18:17:55 GMT-0700 (PDT)";
-        var CHECKSUM = 148234860343;
+        var APP_BUILD_DATE = "Thu Mar 24 2016 20:10:03 GMT-0700 (PDT)";
+        var CHECKSUM = 153426479255;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -1921,12 +1921,18 @@ Ext.define("TSTopLevelTimeReport", {
             scope: this,
             success: function(time_values) {
                 this.setLoading(false);
+                this.logger.log('Create Rows');
                 
                 var rows = this._getRowsFromTime(time_values);
+                this.logger.log('++++');
+                
                 this._addUpperLevelItems(rows).then({
                     scope: this,
                     success: function(results) {
                         this.rows = results;
+                        this.setLoading("Creating Grid...");
+                        
+                        this.logger.log('Create Grid');
                         this._addGrid(this.down('#display_box'));
                     },
                     failure: function(msg){
@@ -2021,10 +2027,10 @@ Ext.define("TSTopLevelTimeReport", {
                 
                 this.setLoading('Loading direct parents...');
                 
-                this._loadParentsFromOIDs(Ext.Array.unique(parent_oids)).then({
+                this._loadParentsFromOIDs(Ext.Array.unique(parent_oids), "Loading direct parents").then({
                     scope: this,
                     success: function(parents) {
-                        this.setLoading('Associating parent information...');
+                        me.setLoading(false);
                         var time = this._addParentsToTime(time_values, lookback_records, parents);
                         deferred.resolve(time);
                     },
@@ -2043,6 +2049,8 @@ Ext.define("TSTopLevelTimeReport", {
         var deferred = Ext.create('Deft.Deferred');
         var me = this;
         
+        this.logger.log('_addUppperLevelItems', rows.length);
+        
         var short_names = Ext.Array.map(me.PortfolioItemNames, function(piname){
             return piname.replace(/.*\//,'');
         });
@@ -2056,36 +2064,59 @@ Ext.define("TSTopLevelTimeReport", {
         var level_3_name = me.PortfolioItemNames[2];
         var level_3_short_name = level_3_name.replace(/.*\//, '');
         
+        this.logger.log('-');
         var oids = Ext.Array.map(rows, function(row){
             return row[level_2_name] && row[level_2_name].ObjectID;
         });
+        
+        this.logger.log('--');
         
         var oids = Ext.Array.map(rows, function(row){
             return row[level_3_name] && row[level_3_name].ObjectID;
         });
                 
+        this.logger.log('---');
         // for stories with stories as parents, the feature doesn't
         // return its parent
         Ext.Array.each(rows, function(row) {
             if ( Ext.isEmpty(row[level_2_name]) && !Ext.isEmpty(row._ItemHierarchy)) {
-                oids = Ext.Array.merge(oids, row._ItemHierarchy);
+                oids = Ext.Array.push(oids, row._ItemHierarchy);
             }
             if ( Ext.isEmpty(row[level_3_name]) && !Ext.isEmpty(row._ItemHierarchy)) {
-                oids = Ext.Array.merge(oids, row._ItemHierarchy);
+                oids = Ext.Array.push(oids, row._ItemHierarchy);
             }
             
         });
         
-        me.setLoading('Loading Parent Tree...');
 
-        this._loadParentsFromOIDs(Ext.Array.unique(oids), true).then({
+        this.logger.log('about to load parents', oids.length);
+        var unique_oids = Ext.Array.unique(oids);
+        this.logger.log('   unique length:', unique_oids.length);
+        
+        this._loadParentsFromOIDs(unique_oids, 'Loading additional parents', true).then({
             scope: this,
             success: function(results) {
-                                
                 var results_by_oid = {};
+                me.setLoading('Calculating...');
                 Ext.Array.each(results, function(result) {
-                    results_by_oid[result.get('ObjectID')] = result;
+                    if ( Ext.isArray(result) ) {
+                        Ext.Array.each(result, function(r) {
+                            if ( r && Ext.isFunction(r.get) ) {
+                                results_by_oid[r.get('ObjectID')] = r;
+                            } else {
+                                console.log('-->', r);
+                            }
+                        });
+                    } else {
+                        if ( result && Ext.isFunction(result.get) ) {
+                            results_by_oid[result.get('ObjectID')] = result;
+                        } else {
+                            console.log('-->', result);
+                        }
+                    }
                 });
+                
+                this.logger.log('+');
                 
                 Ext.Array.each(rows, function(row){
                     var item = row[level_2_name];
@@ -2135,6 +2166,8 @@ Ext.define("TSTopLevelTimeReport", {
     _filterForPI: function(time_values) {
         this.setLoading("Applying PI Filter...");
 
+        this.logger.log('_filterForPI');
+        
         if ( Ext.isEmpty(this._selectedPIData) || this._selectedPIData.length === 0 ) { 
             return time_values;
         }
@@ -2155,7 +2188,7 @@ Ext.define("TSTopLevelTimeReport", {
         return filtered_time_values;
     },
     
-    _loadParentsFromOIDs: function(parent_oids, search_everywhere) {
+    _loadParentsFromOIDs: function(parent_oids, msg, search_everywhere) {
         var me = this;
         var deferred = Ext.create('Deft.Deferred');
 
@@ -2194,18 +2227,21 @@ Ext.define("TSTopLevelTimeReport", {
             if ( search_everywhere ) {
                 config.context = { project: null };
             }
-            promises.push(function() {
-                var percentage = parseInt( page_index * 100 / page_count, 10);
-                this.setLoading("Loading parent information (" + percentage + "%)");
-                return this._loadWsapiArtifacts(config); 
-            });
+            promises.push(
+                function() {
+                    var percentage = parseInt( page_index * 100 / page_count, 10);
+                    var text = msg || "Loading parent information";
+                    me.setLoading(text + " (" + percentage + "%)");
+                    return me._loadWsapiArtifacts(config); 
+                }
+            );
         });
         //
         CA.techservices.promise.ParallelThrottle.throttle(promises, 6, this).then({
         //Deft.Chain.sequence(promises,this).then({
             success: function(results) {
-                
-                deferred.resolve(Ext.Array.flatten(results));
+                me.setLoading(false);
+                deferred.resolve(results);
             },
             failure: function(msg) {
                 deferrred.reject(msg);
@@ -2215,12 +2251,18 @@ Ext.define("TSTopLevelTimeReport", {
         return deferred.promise;
     },
     
-    _addParentsToTime: function(time_values, lookback_records, parents){
-        
+    _addParentsToTime: function(time_values, lookback_records, parent_array){
+        this.logger.log('_addParentsToTime');
+        this.setLoading('Associating parent information...');
+        // parent_array is an array of arrays
         var parents_by_parent_oid = {};
-        Ext.Array.each(parents, function(parent){
-            parents_by_parent_oid[parent.get('ObjectID')] = parent;
+        Ext.Array.each(parent_array, function(parents,idx) {
+            Ext.Array.each(parents, function(parent,jdx){
+                parents_by_parent_oid[parent.get('ObjectID')] = parent;
+            })
         });
+        
+        this.logger.log('.');
         
         var parents_by_oid = {};
         var item_hierarchy_by_oid = {};
@@ -2238,6 +2280,8 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             },this,true);
         },this);
+
+        this.logger.log('..');
         
         Ext.Array.each(time_values, function(time_value){
             var tei = time_value.get('TimeEntryItem');
@@ -2252,13 +2296,19 @@ Ext.define("TSTopLevelTimeReport", {
             }
         });
         
+        this.logger.log('...');
+
         return time_values;
         
     },
     
     _getRowsFromTime: function(time_values) {
         var me = this;
-        return Ext.Array.map( time_values, function(time_value){
+        this.logger.log('_getRowsFromTime', time_values.length);
+        
+        var rows = [];
+        
+        Ext.Array.each( time_values, function(time_value){
             var user = time_value.get('TimeEntryItem').User;
             var user_story = time_value.get('TimeEntryItem').WorkProduct;
             var feature = null;
@@ -2309,8 +2359,10 @@ Ext.define("TSTopLevelTimeReport", {
                 }
             }
             
-            return Ext.merge( data, time_value.getData() );
+            rows.push( Ext.merge( data, time_value.getData() ) );
         });
+        
+        return rows;
     },
     
     _getStore: function() {
@@ -2447,6 +2499,7 @@ Ext.define("TSTopLevelTimeReport", {
             }
         });
         
+        this.setLoading(false);
         this.down('#export_button').setDisabled(false);
     },
     
@@ -2654,7 +2707,7 @@ Ext.define("TSTopLevelTimeReport", {
         var default_config = {
             fetch: ['ObjectID']
         };
-        //this.logger.log("Starting load:",config);
+
         Ext.create('Rally.data.wsapi.artifact.Store', Ext.Object.merge(default_config,config)).load({
             callback : function(records, operation, successful) {
                 if (successful){
