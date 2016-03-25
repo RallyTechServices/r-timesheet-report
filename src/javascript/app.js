@@ -31,7 +31,7 @@ Ext.define("TSTopLevelTimeReport", {
     
     stateful: true,
     stateEvents: ['updateData','columnsChosen','columnmoved','columnresize'],
-    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.d',
+    stateId: 'Rally.technicalservices.tstopleveltimereport.SelectedPIDatal.g',
 
     integrationHeaders : {
         name : "TSTopLevelTimeReport"
@@ -733,16 +733,22 @@ Ext.define("TSTopLevelTimeReport", {
         Ext.Array.each( time_values, function(time_value){
             var user = time_value.get('TimeEntryItem').User;
             var user_story = time_value.get('TimeEntryItem').WorkProduct;
+            var work_product = "";
+            if ( !Ext.isEmpty(user_story) ) {
+                work_product = user_story.FormattedID + ": " + user_story._refObjectName
+            }
             var feature = null;
+            
             
             var data = {
                 '__SecretKey': 1,
-                '_User': user,
+                '_User': user.UserName,
                 '_WeekStartString': time_value.get('TimeEntryItem').WeekStartDate.replace(/T.*$/,''),
                 '_TopLevelParent': time_value.get('_TopLevelParent'),
-                '_CostCenter': user['CostCenter'],
-                '_Vendor': user[me.getSetting('vendorField')],
-                '_WorkProduct': user_story,
+                '_CostCenter': user['CostCenter'] || '',
+                '_Vendor': user[me.getSetting('vendorField')] || '',
+                '_WorkProduct': work_product ,
+                '_Team': user_story && user_story.Project && user_story.Project._refObjectName,
                 '_ItemHierarchy': time_value.get('_ItemHierarchy') || []
             };
             
@@ -971,32 +977,17 @@ Ext.define("TSTopLevelTimeReport", {
             { 
                 dataIndex: '_WorkProduct', 
                 text: 'Story', 
-                hidden: !me._getColumnShowSetting('Story'),
-                renderer: function(v) {
-                    if ( Ext.isEmpty(v) ) {
-                        return "";
-                    }
-                    return v.FormattedID + ": " + v._refObjectName;
-                } 
+                hidden: !me._getColumnShowSetting('Story')
             },
             { 
-                dataIndex: '_WorkProduct', 
+                dataIndex: '_Team', 
                 text: 'Team', 
-                hidden: !me._getColumnShowSetting('Team'),
-                renderer: function(v) {
-                    if ( Ext.isEmpty(v) ) {
-                        return "";
-                    }
-                    return v.Project._refObjectName;
-                }
+                hidden: !me._getColumnShowSetting('Team')
             },
             { 
                 dataIndex: '_User', 
                 text: 'User', 
-                hidden: !me._getColumnShowSetting('User'),
-                renderer: function(value) { 
-                    return value.UserName; 
-                }
+                hidden: !me._getColumnShowSetting('User')
             },
             { 
                 dataIndex: '_CostCenter', 
