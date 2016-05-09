@@ -3,11 +3,11 @@
 <head>
     <title>Technical Services Top Level Time Report</title>
     <!--  (c) 2015,2016 CA Technologies.  All Rights Reserved. -->
-    <!--  Build Date: Thu Mar 24 2016 20:55:35 GMT-0700 (PDT) -->
+    <!--  Build Date: Sun May 08 2016 19:05:28 GMT-0700 (PDT) -->
     
     <script type="text/javascript">
-        var APP_BUILD_DATE = "Thu Mar 24 2016 20:55:35 GMT-0700 (PDT)";
-        var CHECKSUM = 153870373353;
+        var APP_BUILD_DATE = "Sun May 08 2016 19:05:28 GMT-0700 (PDT)";
+        var CHECKSUM = 154102704605;
     </script>
     
     <script type="text/javascript" src="/apps/2.0/sdk.js"></script>
@@ -1054,7 +1054,11 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
 
         var store_config = this.storeConfig;
         
-        store_config.context = { project: Rally.getApp().getContext().getProjectRef() };
+        store_config.context = { 
+            project: Rally.getApp().getContext().getProjectRef(),
+            projectScopeUp: true,
+            projectScopeDown: true
+        };
         
         if ( this.searchContext == "workspace" ) {
             store_config.context = { project: null };

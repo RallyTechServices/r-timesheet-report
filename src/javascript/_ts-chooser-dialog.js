@@ -284,7 +284,11 @@ Ext.define('Rally.technicalservices.ChooserDialog', {
 
         var store_config = this.storeConfig;
         
-        store_config.context = { project: Rally.getApp().getContext().getProjectRef() };
+        store_config.context = { 
+            project: Rally.getApp().getContext().getProjectRef(),
+            projectScopeUp: true,
+            projectScopeDown: true
+        };
         
         if ( this.searchContext == "workspace" ) {
             store_config.context = { project: null };
